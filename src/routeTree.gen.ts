@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as CursosRouteImport } from './routes/cursos'
 import { Route as AgendamentosRouteImport } from './routes/agendamentos'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CursosIndexRouteImport } from './routes/cursos.index'
 import { Route as CursosVideoIdRouteImport } from './routes/cursos.$videoId'
@@ -23,6 +24,11 @@ const CursosRoute = CursosRouteImport.update({
 const AgendamentosRoute = AgendamentosRouteImport.update({
   id: '/agendamentos',
   path: '/agendamentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +49,7 @@ const CursosVideoIdRoute = CursosVideoIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/agendamentos': typeof AgendamentosRoute
   '/cursos': typeof CursosRouteWithChildren
   '/cursos/$videoId': typeof CursosVideoIdRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/agendamentos': typeof AgendamentosRoute
   '/cursos/$videoId': typeof CursosVideoIdRoute
   '/cursos': typeof CursosIndexRoute
@@ -57,6 +65,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/agendamentos': typeof AgendamentosRoute
   '/cursos': typeof CursosRouteWithChildren
   '/cursos/$videoId': typeof CursosVideoIdRoute
@@ -64,12 +73,19 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agendamentos' | '/cursos' | '/cursos/$videoId' | '/cursos/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/agendamentos'
+    | '/cursos'
+    | '/cursos/$videoId'
+    | '/cursos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agendamentos' | '/cursos/$videoId' | '/cursos'
+  to: '/' | '/admin' | '/agendamentos' | '/cursos/$videoId' | '/cursos'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/agendamentos'
     | '/cursos'
     | '/cursos/$videoId'
@@ -78,6 +94,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   AgendamentosRoute: typeof AgendamentosRoute
   CursosRoute: typeof CursosRouteWithChildren
 }
@@ -96,6 +113,13 @@ declare module '@tanstack/react-router' {
       path: '/agendamentos'
       fullPath: '/agendamentos'
       preLoaderRoute: typeof AgendamentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -137,6 +161,7 @@ const CursosRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   AgendamentosRoute: AgendamentosRoute,
   CursosRoute: CursosRouteWithChildren,
 }
