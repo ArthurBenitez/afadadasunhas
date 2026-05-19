@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Calendar as CalendarIcon, Check, Clock, CreditCard, Sparkles, Wallet } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Check, Clock, CreditCard, Wallet } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { DatePickerInput } from "@mantine/dates";
 import { TextInput, Textarea } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -326,8 +327,8 @@ function Summary({ services, date, time, subtotal, discount, total, duration }: 
 function Confirmation({ id, services, date, time, name, total, payment }: { id: string; services: Service[]; date: string; time: string; name: string; total: number; payment: "now" | "later" }) {
   return (
     <div className="mx-auto max-w-xl px-4 py-16 text-center">
-      <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 14 }} className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gradient-luxe text-primary-foreground shadow-luxury">
-        <Sparkles className="h-9 w-9" />
+      <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 14 }} className="mx-auto">
+        <BrandMark className="h-20 w-20 shadow-luxury rounded-full" />
       </motion.div>
       <h1 className="mt-6 font-display text-4xl text-foreground">Tudo certo, {name.split(" ")[0]}!</h1>
       <p className="mt-2 text-muted-foreground">Seu agendamento foi confirmado.</p>

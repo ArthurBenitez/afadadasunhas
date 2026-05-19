@@ -1,7 +1,8 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Menu, Sparkles, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand-mark";
 
 const navItems = [
   { to: "/", label: "Início" },
@@ -17,9 +18,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="group flex items-center gap-2" onClick={() => setOpen(false)}>
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-luxe text-primary-foreground shadow-soft">
-            <Sparkles className="h-4 w-4" />
-          </span>
+          <BrandMark className="h-9 w-9 shadow-soft rounded-full" />
           <span className="font-display text-xl text-primary leading-none">
             afada<span className="text-foreground/70">.</span>
           </span>

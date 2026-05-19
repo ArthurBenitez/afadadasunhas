@@ -19,7 +19,7 @@ export function SiteFooter() {
         </div>
         <div className="space-y-2 text-sm text-muted-foreground">
           <p className="font-semibold text-foreground">Contato</p>
-          <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> São Paulo, SP</p>
+          <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Florianópolis - Itacorubi, SC</p>
           <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> contato@afadadasunhas.com</p>
           <p className="flex items-center gap-2"><Instagram className="h-4 w-4 text-primary" /> @afadadasunhas</p>
         </div>
