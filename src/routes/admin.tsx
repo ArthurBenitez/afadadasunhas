@@ -185,7 +185,7 @@ function AdminPage() {
         </button>
       </header>
 
-      <Tabs defaultValue="courses" mt="xl" variant="pills" radius="md" color="marsala">
+      <Tabs defaultValue="courses" mt="xl" variant="pills" radius="md">
         <Tabs.List grow>
           <Tabs.Tab value="courses" leftSection={<FilmIcon size={16} />}>Cursos / Netflix</Tabs.Tab>
           <Tabs.Tab value="comments" leftSection={<MessageSquare size={16} />}>Comentários</Tabs.Tab>
