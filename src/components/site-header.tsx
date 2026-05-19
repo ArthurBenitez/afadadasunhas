@@ -58,6 +58,14 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
+          {profile?.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="text-sm font-semibold text-primary border border-primary/20 px-4 py-2 rounded-full hover:bg-primary/5 transition-colors"
+            >
+              Painel Admin
+            </Link>
+          )}
           <Link
             to="/agendamentos"
             className="rounded-full bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground shadow-soft transition-transform hover:scale-[1.03]"
