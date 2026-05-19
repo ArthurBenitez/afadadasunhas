@@ -4,6 +4,7 @@ import { LogOut, Play, CreditCard, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Modal, Button, Text } from "@mantine/core";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/cursos/")({
   component: CursosHome,
