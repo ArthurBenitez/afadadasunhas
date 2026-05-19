@@ -141,7 +141,7 @@ function LoginGate() {
           />
           
           {err && (
-            <Alert color="red" variant="light" size="sm">
+            <Alert color="red" variant="light">
               {err}
             </Alert>
           )}
