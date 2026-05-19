@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarHeart, GraduationCap, Heart, Sparkles, Star } from "lucide-react";
+import { ArrowRight, CalendarHeart, GraduationCap, Heart, Star } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import heroHands from "@/assets/hero-hands.jpg";
 import flatlay from "@/assets/services-flatlay.jpg";
 import teaching from "@/assets/courses-teaching.jpg";
@@ -38,7 +39,7 @@ function HomePage() {
         <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pt-12 pb-16 md:grid-cols-2 md:items-center md:gap-16 md:pt-20 md:pb-28">
           <motion.div {...fadeUp} className="order-2 md:order-1">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-              <Sparkles className="h-3.5 w-3.5" /> Estúdio em São Paulo
+              <BrandMark variant="mono" className="h-3.5 w-3.5 text-primary" /> Estúdio em Florianópolis
             </span>
             <h1 className="mt-5 font-display text-[2.6rem] leading-[1.05] text-foreground text-balance md:text-6xl">
               A arte de cuidar das suas <span className="text-primary italic">unhas</span>.
