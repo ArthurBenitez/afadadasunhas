@@ -1,8 +1,9 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { Menu, X, User } from "lucide-react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand-mark";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { to: "/", label: "Início" },
@@ -12,7 +13,27 @@ const navItems = [
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    async function getProfile() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        setProfile(data);
+      } else {
+        setProfile(null);
+      }
+    }
+    getProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      getProfile();
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
@@ -37,6 +58,14 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
+          {profile?.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="text-sm font-semibold text-primary border border-primary/20 px-4 py-2 rounded-full hover:bg-primary/5 transition-colors"
+            >
+              Painel Admin
+            </Link>
+          )}
           <Link
             to="/agendamentos"
             className="rounded-full bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground shadow-soft transition-transform hover:scale-[1.03]"
