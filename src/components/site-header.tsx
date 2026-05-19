@@ -13,7 +13,27 @@ const navItems = [
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    async function getProfile() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        setProfile(data);
+      } else {
+        setProfile(null);
+      }
+    }
+    getProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      getProfile();
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
