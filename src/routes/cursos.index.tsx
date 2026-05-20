@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { LogOut, Play, CreditCard, Loader2 } from "lucide-react";
+import { LogOut, Play, CreditCard, Loader2, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Modal, Button, Text } from "@mantine/core";
@@ -17,7 +17,17 @@ function CursosHome() {
   const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [activeExpiresAt, setActiveExpiresAt] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const isSubscriptionActive = (sub: any, prof: any) => {
+    if (prof?.role === 'admin') return true;
+    if (!sub?.is_active) return false;
+    if (sub.expires_at && new Date(sub.expires_at) <= new Date()) return false;
+    return true;
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -38,11 +48,14 @@ function CursosHome() {
       setProfile(profileRes.data);
       setSubscription(subRes.data);
       setSections(sectionsRes.data || []);
-      
-      if (subRes.data && !subRes.data.is_active && profileRes.data?.role !== 'admin') {
-        setShowPaymentModal(true);
+
+      // Check URL for ?paywall=1 (came from blocked video access)
+      if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('paywall') === '1') {
+        if (!isSubscriptionActive(subRes.data, profileRes.data)) {
+          setShowPaymentModal(true);
+        }
       }
-      
+
       setLoading(false);
     }
 
@@ -67,6 +80,42 @@ function CursosHome() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/cursos" });
+  };
+
+  const handleVideoClick = (e: React.MouseEvent, videoId: string) => {
+    if (isSubscriptionActive(subscription, profile)) return; // allow navigation
+    e.preventDefault();
+    setShowPaymentModal(true);
+  };
+
+  const handlePayment = async () => {
+    if (!session) return;
+    setProcessingPayment(true);
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .update({
+        is_active: true,
+        expires_at: expiresAt.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', session.user.id)
+      .select()
+      .single();
+
+    setProcessingPayment(false);
+
+    if (error) {
+      toast.error("Erro ao processar pagamento. Tente novamente.");
+      return;
+    }
+
+    setSubscription(data);
+    setActiveExpiresAt(expiresAt.toISOString());
+    setShowPaymentModal(false);
+    setShowSuccessModal(true);
   };
 
   if (loading) {
@@ -108,6 +157,7 @@ function CursosHome() {
                 {sections[0].videos?.[0] && (
                   <Link
                     to="/cursos/$videoId" params={{ videoId: sections[0].videos[0].id }}
+                    onClick={(e) => handleVideoClick(e, sections[0].videos[0].id)}
                     className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-luxury hover:scale-[1.02]"
                   >
                     <Play className="h-4 w-4 fill-current" /> Assistir agora
@@ -129,7 +179,7 @@ function CursosHome() {
                 </div>
                 <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {sec.videos?.sort((a: any, b: any) => a.order - b.order).map((v: any) => (
-                    <Link key={v.id} to="/cursos/$videoId" params={{ videoId: v.id }} className="group w-[78%] shrink-0 sm:w-[42%] md:w-[28%] lg:w-[22%]">
+                    <Link key={v.id} to="/cursos/$videoId" params={{ videoId: v.id }} onClick={(e) => handleVideoClick(e, v.id)} className="group w-[78%] shrink-0 sm:w-[42%] md:w-[28%] lg:w-[22%]">
                       <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
                         <img src={v.thumbnail_url || "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?q=80&w=1000&auto=format&fit=crop"} alt={v.title} className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
                         <span className="absolute inset-0 grid place-items-center opacity-0 transition-opacity group-hover:opacity-100">
@@ -156,15 +206,21 @@ function CursosHome() {
       {/* Payment Required Modal */}
       <Modal 
         opened={showPaymentModal} 
-        onClose={() => {}} 
-        withCloseButton={false}
+        onClose={() => setShowPaymentModal(false)} 
+        withCloseButton={true}
         centered
         radius="xl"
+        transitionProps={{ transition: 'pop', duration: 300 }}
         styles={{
           content: { backgroundColor: '#2F1B1A', border: '1px solid rgba(255,255,255,0.1)' }
         }}
       >
-        <div className="text-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="text-center p-4"
+        >
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 text-primary">
             <CreditCard className="h-8 w-8" />
           </div>
@@ -177,20 +233,57 @@ function CursosHome() {
             className="mt-6 bg-gradient-luxe shadow-luxury" 
             size="lg" 
             radius="md"
-            onClick={() => {
-              // In a real app, this would redirect to checkout
-              toast.info("Redirecionando para o pagamento...");
-            }}
+            loading={processingPayment}
+            onClick={handlePayment}
           >
             Ir para o pagamento
           </Button>
-          <button 
-            onClick={handleLogout}
-            className="mt-4 text-xs text-[var(--sand)]/40 hover:text-white"
+        </motion.div>
+      </Modal>
+
+      {/* Payment Success Modal */}
+      <Modal
+        opened={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        withCloseButton={false}
+        centered
+        radius="xl"
+        transitionProps={{ transition: 'pop', duration: 300 }}
+        styles={{
+          content: { backgroundColor: '#2F1B1A', border: '1px solid rgba(255,255,255,0.1)' }
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="text-center p-4"
+        >
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.15, type: "spring", stiffness: 200 }}
+            className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-500/20 text-green-400"
           >
-            Sair da conta
-          </button>
-        </div>
+            <CheckCircle2 className="h-12 w-12" />
+          </motion.div>
+          <Text size="xl" fw={700} className="mt-4 font-display text-[var(--sand)]">Pagamento confirmado!</Text>
+          <Text size="sm" className="mt-2 text-[var(--sand)]/70">
+            Acesso liberado a todos os módulos até{" "}
+            <strong className="text-[var(--sand)]">
+              {activeExpiresAt && new Date(activeExpiresAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </strong>.
+          </Text>
+          <Button
+            fullWidth
+            className="mt-6 bg-gradient-luxe shadow-luxury"
+            size="lg"
+            radius="md"
+            onClick={() => setShowSuccessModal(false)}
+          >
+            Começar a assistir
+          </Button>
+        </motion.div>
       </Modal>
     </div>
   );

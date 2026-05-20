@@ -1,60 +1,39 @@
-## Diagnóstico
+## Plano de ajustes
 
-Identifiquei três problemas conectados que estão bloqueando o acesso admin:
+### 1. Resetar senha do admin
+- Atualizar a senha do usuário `admin@afadadasunhas.com.br` para `#@tralalerotralala33sahurz&` via update direto em `auth.users` (usando `crypt()` + `gen_salt('bf')`) através de uma migration administrativa.
 
-1. **Recursão infinita nas políticas RLS da tabela `profiles`** (erro `42P17` em todas as requisições). A política "Admins can view all profiles" consulta a própria tabela `profiles`, o que cria loop infinito. Resultado: nenhuma query funciona após o login — nem `profiles`, nem `sections`, nem `subscriptions`. Por isso a UI de admin nunca aparece (o frontend não consegue ler `profile.role`).
-2. **Conta admin sem papel atribuído**. O `admin@afadadasunhas.com.br` foi criado, mas o trigger insere todos como `role = 'user'`. Precisa ser promovido a `admin` e ter assinatura ativa.
-3. **Banco vazio** — nenhuma seção/vídeo de exemplo, então mesmo após o fix a página fica "crua".
+### 2. Reestruturar gating de pagamento em `/cursos`
 
-## Plano de correção
+**Comportamento atual:** popup aparece imediatamente ao entrar em `/cursos` se a assinatura estiver inativa, bloqueando toda navegação.
 
-### 1. Refatorar segurança (migration)
-- Criar enum `app_role` e tabela dedicada `user_roles` (padrão seguro recomendado, separa papéis dos perfis e elimina recursão).
-- Criar função `SECURITY DEFINER` `public.has_role(_user_id, _role)` para checar papel sem disparar RLS.
-- **Reescrever todas as políticas** que hoje fazem `SELECT … FROM profiles WHERE role='admin'` (em `profiles`, `sections`, `videos`, `comments`, `subscriptions`) para usar `public.has_role(auth.uid(), 'admin')`.
-- Atualizar trigger `handle_new_user` para também inserir `('user_id', 'user')` em `user_roles`.
-- Migrar papel existente: para cada linha em `profiles` com `role='admin'`, inserir em `user_roles`.
+**Novo comportamento:**
+- Ao entrar em `/cursos`, o usuário vê normalmente todas as seções e thumbnails dos vídeos — sem popup.
+- O clique em qualquer card de vídeo é interceptado:
+  - Se `subscription.is_active = true` (ou `role = admin`) → navega para `/cursos/$videoId` normalmente.
+  - Se inativo → abre popup com animação (Mantine Modal já existe; adicionar `transitionProps` com `transition: 'pop'` + `framer-motion` no conteúdo interno para fade/scale suave).
+- Como reforço de segurança, a rota `/cursos/$videoId` também verifica a assinatura no carregamento e redireciona para `/cursos` (abrindo o popup via query param `?paywall=1`) caso o usuário tente acessar diretamente pela URL.
 
-### 2. Promover conta admin + ativar assinatura (data insert)
-- Inserir `(admin_user_id, 'admin')` em `user_roles`.
-- Atualizar `profiles.role = 'admin'` para `admin@afadadasunhas.com.br` (mantido por compat).
-- Marcar `subscriptions.is_active = true` para esse usuário.
+### 3. Fluxo simulado de pagamento
 
-### 3. Seed de conteúdo de exemplo (data insert)
-Inserir 3 seções com 2–3 vídeos cada (Fundamentos, Técnica Russa, Nail Art), reaproveitando thumbnails Unsplash e vídeos públicos de demonstração que já existiam no mock `src/lib/courses/data.ts`.
+- Botão **"Ir para o pagamento"** dentro do popup deixa de apenas mostrar um toast.
+- Ao clicar:
+  1. Faz `update` em `subscriptions` para o usuário logado:
+     - `is_active = true`
+     - `expires_at = now() + interval '1 month'` (timestamp preciso para validade mensal)
+     - `updated_at = now()`
+  2. Fecha o popup de paywall.
+  3. Abre um segundo popup (ou troca o conteúdo do mesmo) com animação de sucesso (ícone check + texto "Pagamento confirmado! Acesso liberado até DD/MM/AAAA").
+  4. Recarrega o estado local de `subscription` para que cliques subsequentes em vídeos funcionem imediatamente sem refresh.
 
-### 4. Ajuste pontual no frontend
-- Em `src/components/site-header.tsx` e `src/routes/admin.tsx`, trocar a checagem de role para usar `user_roles` via `has_role` RPC (ou consultar `user_roles` diretamente). Isso é o único toque na UI — nenhuma outra tela é alterada.
-- Adicionar fallback: se `profile.role === 'admin'` OU existir linha em `user_roles`, libera o painel (para não quebrar nada se a migração de papel atrasar).
+### 4. Validade mensal (timestamp)
+- Toda checagem de "está pago" passa a considerar: `is_active = true` **E** (`expires_at IS NULL OR expires_at > now()`).
+- Isso vale tanto no frontend (gating do clique) quanto pode ser reforçado depois via RLS/policy se desejar — nesta iteração só ajusto o frontend para manter o escopo mínimo.
 
-## Detalhes técnicos
+### Arquivos afetados
+- `supabase/migrations/<novo>.sql` — reset de senha do admin (uma única migration administrativa).
+- `src/routes/cursos.index.tsx` — remove popup automático, adiciona interceptação de clique, popup com animação, fluxo de pagamento simulado e popup de confirmação.
+- `src/routes/cursos.$videoId.tsx` — adiciona checagem de assinatura ativa antes de renderizar o player; redireciona para `/cursos?paywall=1` se não pago.
 
-```sql
--- enum + tabela
-CREATE TYPE public.app_role AS ENUM ('admin','user');
-CREATE TABLE public.user_roles (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role public.app_role NOT NULL,
-  UNIQUE(user_id, role)
-);
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-
--- função sem recursão
-CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role public.app_role)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role=_role) $$;
-
--- substitui policies recursivas, ex.:
-DROP POLICY "Admins can view all profiles" ON public.profiles;
-CREATE POLICY "Admins can view all profiles" ON public.profiles
-  FOR SELECT USING (public.has_role(auth.uid(), 'admin'));
-```
-
-## O que NÃO será alterado
-- Layout, design, paleta, hero, header (exceto a leitura do role).
-- Rotas de agendamento, cursos, vídeo player, comentários.
-- Lógica do popup de assinatura inativa.
-
-## Confirmação necessária
-Vou usar o e-mail `admin@afadadasunhas.com.br` já cadastrado como admin oficial. **Confirma essa conta?** (a outra criada com typo `…com.b` será ignorada).
+### O que NÃO muda
+- Layout, design, header, hero, carrosséis, comentários, área admin, agendamentos, autenticação, RLS, seed de vídeos — tudo permanece intacto.
