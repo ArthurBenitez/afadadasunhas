@@ -26,6 +26,19 @@ function VideoPage() {
     }
     setSession(session);
 
+    // Check subscription / admin status — block direct URL access if unpaid
+    const [profileRes, subRes] = await Promise.all([
+      supabase.from('profiles').select('role').eq('id', session.user.id).single(),
+      supabase.from('subscriptions').select('is_active, expires_at').eq('user_id', session.user.id).single(),
+    ]);
+    const isAdmin = profileRes.data?.role === 'admin';
+    const sub = subRes.data;
+    const subActive = sub?.is_active && (!sub.expires_at || new Date(sub.expires_at) > new Date());
+    if (!isAdmin && !subActive) {
+      nav({ to: "/cursos", search: { paywall: '1' } as any });
+      return;
+    }
+
     // Load video and its section
     const { data: videoData } = await supabase
       .from('videos')
