@@ -1,39 +1,43 @@
-## Plano de ajustes
+## Diagnóstico
 
-### 1. Resetar senha do admin
-- Atualizar a senha do usuário `admin@afadadasunhas.com.br` para `#@tralalerotralala33sahurz&` via update direto em `auth.users` (usando `crypt()` + `gen_salt('bf')`) através de uma migration administrativa.
+Investiguei o fluxo atual em `src/routes/cursos.index.tsx` + `src/routes/cursos.$videoId.tsx` e o estado do banco. Encontrei 3 causas reais que explicam por que o popup não aparece ao clicar no módulo:
 
-### 2. Reestruturar gating de pagamento em `/cursos`
+1. **`<Link>` do TanStack Router não bloqueia confiavelmente a navegação via `e.preventDefault()` no `onClick`**. Em muitos casos a navegação client-side acontece mesmo assim — então o clique sai de `/cursos` e vai direto para `/cursos/$videoId`. Lá o componente faz `window.location.href = "/cursos?paywall=1"`, gerando um *full reload* — e o popup pode falhar em aparecer dependendo do timing do `useEffect` vs. a leitura do `URLSearchParams`.
 
-**Comportamento atual:** popup aparece imediatamente ao entrar em `/cursos` se a assinatura estiver inativa, bloqueando toda navegação.
+2. **Usuário atual provavelmente está logado como admin** (`admin@afadadasunhas.com.br`) — no banco a conta tem `is_active = true` e `expires_at = 2036`. Para essa conta o comportamento correto **é** não mostrar popup. Se o teste estiver sendo feito com essa conta, o popup nunca vai aparecer (e isso é correto).
 
-**Novo comportamento:**
-- Ao entrar em `/cursos`, o usuário vê normalmente todas as seções e thumbnails dos vídeos — sem popup.
-- O clique em qualquer card de vídeo é interceptado:
-  - Se `subscription.is_active = true` (ou `role = admin`) → navega para `/cursos/$videoId` normalmente.
-  - Se inativo → abre popup com animação (Mantine Modal já existe; adicionar `transitionProps` com `transition: 'pop'` + `framer-motion` no conteúdo interno para fade/scale suave).
-- Como reforço de segurança, a rota `/cursos/$videoId` também verifica a assinatura no carregamento e redireciona para `/cursos` (abrindo o popup via query param `?paywall=1`) caso o usuário tente acessar diretamente pela URL.
+3. **Verificação de admin no frontend usa `profile?.role`**, mas a conta admin tem `profiles.role = NULL` (a role real vive em `user_roles`). Hoje só funciona porque a assinatura está ativa. Se a assinatura expirar, o admin perde acesso indevidamente. Vou corrigir.
 
-### 3. Fluxo simulado de pagamento
+## Plano de correção
 
-- Botão **"Ir para o pagamento"** dentro do popup deixa de apenas mostrar um toast.
-- Ao clicar:
-  1. Faz `update` em `subscriptions` para o usuário logado:
-     - `is_active = true`
-     - `expires_at = now() + interval '1 month'` (timestamp preciso para validade mensal)
-     - `updated_at = now()`
-  2. Fecha o popup de paywall.
-  3. Abre um segundo popup (ou troca o conteúdo do mesmo) com animação de sucesso (ícone check + texto "Pagamento confirmado! Acesso liberado até DD/MM/AAAA").
-  4. Recarrega o estado local de `subscription` para que cliques subsequentes em vídeos funcionem imediatamente sem refresh.
+### 1. Trocar `<Link>` por elemento clicável controlado nos cards de vídeo
+Em `src/routes/cursos.index.tsx`, os cards de vídeo (hero + carrosséis) deixam de ser `<Link>` e passam a ser `<button>` / `<div role="button">`. O handler único decide:
+- se assinatura ativa → `navigate({ to: "/cursos/$videoId", params: { videoId } })`
+- se inativa → `setShowPaymentModal(true)` (popup com animação aparece imediatamente, sem navegação alguma)
 
-### 4. Validade mensal (timestamp)
-- Toda checagem de "está pago" passa a considerar: `is_active = true` **E** (`expires_at IS NULL OR expires_at > now()`).
-- Isso vale tanto no frontend (gating do clique) quanto pode ser reforçado depois via RLS/policy se desejar — nesta iteração só ajusto o frontend para manter o escopo mínimo.
+Isso elimina a corrida com a navegação do TanStack Link e garante o popup 100% das vezes.
 
-### Arquivos afetados
-- `supabase/migrations/<novo>.sql` — reset de senha do admin (uma única migration administrativa).
-- `src/routes/cursos.index.tsx` — remove popup automático, adiciona interceptação de clique, popup com animação, fluxo de pagamento simulado e popup de confirmação.
-- `src/routes/cursos.$videoId.tsx` — adiciona checagem de assinatura ativa antes de renderizar o player; redireciona para `/cursos?paywall=1` se não pago.
+### 2. Corrigir verificação de admin
+Em vez de `profile?.role === 'admin'`, carregar também `user_roles` (`supabase.from('user_roles').select('role').eq('user_id', session.user.id)`) e considerar admin se existir linha com `role = 'admin'`. Atualizar `isSubscriptionActive(sub, isAdmin)` para receber esse boolean.
 
-### O que NÃO muda
-- Layout, design, header, hero, carrosséis, comentários, área admin, agendamentos, autenticação, RLS, seed de vídeos — tudo permanece intacto.
+Aplicar o mesmo em `src/routes/cursos.$videoId.tsx` (a verificação de bloqueio direto via URL).
+
+### 3. Fallback de assinatura ausente
+Se `subscriptions` retornar `null` (usuário antigo sem linha), tratar como **inativo** (já é o comportamento, mas explicitar com `?? null` para evitar warnings) e disparar popup ao clicar.
+
+### 4. Garantia adicional no `/cursos/$videoId`
+Manter a checagem server-side-equivalente (já existe) que redireciona para `/cursos?paywall=1` caso alguém cole a URL diretamente. Trocar `window.location.href` por `navigate({ to: "/cursos", search: { paywall: "1" } })` para evitar full reload e perder estado React.
+
+## Arquivos afetados
+- `src/routes/cursos.index.tsx` — trocar Links por buttons nos cards, carregar `user_roles`, corrigir helper `isSubscriptionActive`.
+- `src/routes/cursos.$videoId.tsx` — carregar `user_roles`, trocar `window.location.href` por `navigate`.
+
+## O que NÃO muda
+Layout, design, hero, animação do popup, fluxo de pagamento simulado, popup de sucesso, comentários, área admin, agendamentos, autenticação, RLS, seed.
+
+## Pergunta de validação
+Você está testando com qual conta?
+- `admin@afadadasunhas.com.br` → não deve ver popup (já é admin/ativo) ✅
+- `admin22@afadadasunhas.com.br` ou outra conta nova → deve ver popup; é onde o bug aparece.
+
+Se for o primeiro caso, posso te criar uma conta de teste sem assinatura para você validar visualmente o popup.
