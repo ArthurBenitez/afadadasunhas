@@ -35,7 +35,11 @@ function VideoPage() {
     const sub = subRes.data;
     const subActive = sub?.is_active && (!sub.expires_at || new Date(sub.expires_at) > new Date());
     if (!isAdmin && !subActive) {
-      nav({ to: "/cursos", search: { paywall: '1' } as any });
+      if (typeof window !== 'undefined') {
+        window.location.href = "/cursos?paywall=1";
+      } else {
+        nav({ to: "/cursos" });
+      }
       return;
     }
 
