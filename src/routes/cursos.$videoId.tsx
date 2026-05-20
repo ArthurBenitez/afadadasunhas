@@ -27,19 +27,17 @@ function VideoPage() {
     setSession(session);
 
     // Check subscription / admin status — block direct URL access if unpaid
-    const [profileRes, subRes] = await Promise.all([
-      supabase.from('profiles').select('role').eq('id', session.user.id).single(),
-      supabase.from('subscriptions').select('is_active, expires_at').eq('user_id', session.user.id).single(),
+    const [profileRes, subRes, rolesRes] = await Promise.all([
+      supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle(),
+      supabase.from('subscriptions').select('is_active, expires_at').eq('user_id', session.user.id).maybeSingle(),
+      supabase.from('user_roles').select('role').eq('user_id', session.user.id),
     ]);
-    const isAdmin = profileRes.data?.role === 'admin';
+    const isAdmin = profileRes.data?.role === 'admin'
+      || (rolesRes.data || []).some((r: any) => r.role === 'admin');
     const sub = subRes.data;
     const subActive = sub?.is_active && (!sub.expires_at || new Date(sub.expires_at) > new Date());
     if (!isAdmin && !subActive) {
-      if (typeof window !== 'undefined') {
-        window.location.href = "/cursos?paywall=1";
-      } else {
-        nav({ to: "/cursos" });
-      }
+      nav({ to: "/cursos", search: { paywall: "1" } as any });
       return;
     }
 
