@@ -13,6 +13,7 @@ export const Route = createFileRoute("/cursos/")({
 function CursosHome() {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,8 +23,8 @@ function CursosHome() {
   const [activeExpiresAt, setActiveExpiresAt] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const isSubscriptionActive = (sub: any, prof: any) => {
-    if (prof?.role === 'admin') return true;
+  const isSubscriptionActive = (sub: any, admin: boolean) => {
+    if (admin) return true;
     if (!sub?.is_active) return false;
     if (sub.expires_at && new Date(sub.expires_at) <= new Date()) return false;
     return true;
@@ -38,20 +39,24 @@ function CursosHome() {
       }
       setSession(session);
 
-      // Load profile and subscription
-      const [profileRes, subRes, sectionsRes] = await Promise.all([
+      // Load profile, subscription, roles and sections
+      const [profileRes, subRes, sectionsRes, rolesRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
-        supabase.from('subscriptions').select('*').eq('user_id', session.user.id).single(),
-        supabase.from('sections').select('*, videos(*)').order('order', { ascending: true })
+        supabase.from('subscriptions').select('*').eq('user_id', session.user.id).maybeSingle(),
+        supabase.from('sections').select('*, videos(*)').order('order', { ascending: true }),
+        supabase.from('user_roles').select('role').eq('user_id', session.user.id),
       ]);
 
       setProfile(profileRes.data);
       setSubscription(subRes.data);
       setSections(sectionsRes.data || []);
+      const admin = (rolesRes.data || []).some((r: any) => r.role === 'admin')
+        || profileRes.data?.role === 'admin';
+      setIsAdmin(admin);
 
       // Check URL for ?paywall=1 (came from blocked video access)
       if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('paywall') === '1') {
-        if (!isSubscriptionActive(subRes.data, profileRes.data)) {
+        if (!isSubscriptionActive(subRes.data, admin)) {
           setShowPaymentModal(true);
         }
       }
@@ -83,8 +88,12 @@ function CursosHome() {
   };
 
   const handleVideoClick = (e: React.MouseEvent, videoId: string) => {
-    if (isSubscriptionActive(subscription, profile)) return; // allow navigation
+    if (isSubscriptionActive(subscription, isAdmin)) {
+      navigate({ to: "/cursos/$videoId", params: { videoId } });
+      return;
+    }
     e.preventDefault();
+    e.stopPropagation();
     setShowPaymentModal(true);
   };
 
@@ -94,14 +103,15 @@ function CursosHome() {
     const expiresAt = new Date();
     expiresAt.setMonth(expiresAt.getMonth() + 1);
 
+    // Upsert in case user has no subscription row yet
     const { data, error } = await supabase
       .from('subscriptions')
-      .update({
+      .upsert({
+        user_id: session.user.id,
         is_active: true,
         expires_at: expiresAt.toISOString(),
         updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', session.user.id)
+      }, { onConflict: 'user_id' })
       .select()
       .single();
 
@@ -155,13 +165,13 @@ function CursosHome() {
                 <h2 className="mt-1 font-display text-3xl md:text-5xl">{sections[0].title}</h2>
                 <p className="mt-2 max-w-xl text-sm text-[var(--sand)]/80 md:text-base">{sections[0].description}</p>
                 {sections[0].videos?.[0] && (
-                  <Link
-                    to="/cursos/$videoId" params={{ videoId: sections[0].videos[0].id }}
+                  <button
+                    type="button"
                     onClick={(e) => handleVideoClick(e, sections[0].videos[0].id)}
                     className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-luxury hover:scale-[1.02]"
                   >
                     <Play className="h-4 w-4 fill-current" /> Assistir agora
-                  </Link>
+                  </button>
                 )}
               </div>
             </motion.div>
@@ -179,7 +189,7 @@ function CursosHome() {
                 </div>
                 <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {sec.videos?.sort((a: any, b: any) => a.order - b.order).map((v: any) => (
-                    <Link key={v.id} to="/cursos/$videoId" params={{ videoId: v.id }} onClick={(e) => handleVideoClick(e, v.id)} className="group w-[78%] shrink-0 sm:w-[42%] md:w-[28%] lg:w-[22%]">
+                    <button key={v.id} type="button" onClick={(e) => handleVideoClick(e, v.id)} className="group w-[78%] shrink-0 text-left sm:w-[42%] md:w-[28%] lg:w-[22%]">
                       <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
                         <img src={v.thumbnail_url || "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?q=80&w=1000&auto=format&fit=crop"} alt={v.title} className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
                         <span className="absolute inset-0 grid place-items-center opacity-0 transition-opacity group-hover:opacity-100">
@@ -189,7 +199,7 @@ function CursosHome() {
                         </span>
                       </div>
                       <p className="mt-2 line-clamp-2 text-sm font-medium">{v.title}</p>
-                    </Link>
+                    </button>
                   ))}
                 </div>
               </section>
