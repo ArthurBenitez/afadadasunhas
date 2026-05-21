@@ -31,6 +31,14 @@ const fadeUp = {
 };
 
 function HomePage() {
+  const [services, setServices] = useState<Service[]>([]);
+  useEffect(() => {
+    supabase.from('services').select('*').order('order', { ascending: true }).then(({ data }) => {
+      setServices((data || []).map((s: any) => ({
+        id: s.id, name: s.name, description: s.description || '', durationMin: s.duration_min, price: Number(s.price),
+      })));
+    });
+  }, []);
   return (
     <>
       {/* HERO */}
