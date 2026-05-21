@@ -1,43 +1,67 @@
-## Diagnóstico
 
-Investiguei o fluxo atual em `src/routes/cursos.index.tsx` + `src/routes/cursos.$videoId.tsx` e o estado do banco. Encontrei 3 causas reais que explicam por que o popup não aparece ao clicar no módulo:
+## Resumo
 
-1. **`<Link>` do TanStack Router não bloqueia confiavelmente a navegação via `e.preventDefault()` no `onClick`**. Em muitos casos a navegação client-side acontece mesmo assim — então o clique sai de `/cursos` e vai direto para `/cursos/$videoId`. Lá o componente faz `window.location.href = "/cursos?paywall=1"`, gerando um *full reload* — e o popup pode falhar em aparecer dependendo do timing do `useEffect` vs. a leitura do `URLSearchParams`.
+1. **Pagamento simulado** — A mensagem de sucesso (`showSuccessModal` com animação `CheckCircle2`) já existe e funciona em `src/routes/cursos.index.tsx`. Vou apenas confirmar que está disparando corretamente após o clique em "Ir para o pagamento" — sem alterações estruturais.
 
-2. **Usuário atual provavelmente está logado como admin** (`admin@afadadasunhas.com.br`) — no banco a conta tem `is_active = true` e `expires_at = 2036`. Para essa conta o comportamento correto **é** não mostrar popup. Se o teste estiver sendo feito com essa conta, o popup nunca vai aparecer (e isso é correto).
+2. **Controles de admin inline em `/cursos`** — Hoje o admin precisa ir até `/admin` para criar seções/vídeos. Vou trazer esses controles para dentro da própria página `/cursos` quando o usuário for admin (sem remover o painel `/admin`).
 
-3. **Verificação de admin no frontend usa `profile?.role`**, mas a conta admin tem `profiles.role = NULL` (a role real vive em `user_roles`). Hoje só funciona porque a assinatura está ativa. Se a assinatura expirar, o admin perde acesso indevidamente. Vou corrigir.
+3. **Gestão de serviços** (Manicure Russa, Alongamento em Fibra, etc.) — Hoje os serviços são uma lista hardcoded em `src/lib/booking/data.ts`. Vou migrar para uma tabela no banco e adicionar um CRUD para o admin.
 
-## Plano de correção
+---
 
-### 1. Trocar `<Link>` por elemento clicável controlado nos cards de vídeo
-Em `src/routes/cursos.index.tsx`, os cards de vídeo (hero + carrosséis) deixam de ser `<Link>` e passam a ser `<button>` / `<div role="button">`. O handler único decide:
-- se assinatura ativa → `navigate({ to: "/cursos/$videoId", params: { videoId } })`
-- se inativa → `setShowPaymentModal(true)` (popup com animação aparece imediatamente, sem navegação alguma)
+## Mudanças
 
-Isso elimina a corrida com a navegação do TanStack Link e garante o popup 100% das vezes.
+### A. Banco de dados (migration)
 
-### 2. Corrigir verificação de admin
-Em vez de `profile?.role === 'admin'`, carregar também `user_roles` (`supabase.from('user_roles').select('role').eq('user_id', session.user.id)`) e considerar admin se existir linha com `role = 'admin'`. Atualizar `isSubscriptionActive(sub, isAdmin)` para receber esse boolean.
+Criar tabela `services`:
+- `id uuid pk`
+- `name text not null`
+- `description text`
+- `duration_min int not null`
+- `price numeric(10,2) not null`
+- `order int default 0`
+- `created_at`, `updated_at`
 
-Aplicar o mesmo em `src/routes/cursos.$videoId.tsx` (a verificação de bloqueio direto via URL).
+RLS:
+- SELECT: público (qualquer um vê — usado em `/agendamentos`).
+- INSERT/UPDATE/DELETE: apenas admin (`has_role(auth.uid(), 'admin')`).
 
-### 3. Fallback de assinatura ausente
-Se `subscriptions` retornar `null` (usuário antigo sem linha), tratar como **inativo** (já é o comportamento, mas explicitar com `?? null` para evitar warnings) e disparar popup ao clicar.
+Seed inicial: copiar os 6 serviços de `src/lib/booking/data.ts` para a tabela.
 
-### 4. Garantia adicional no `/cursos/$videoId`
-Manter a checagem server-side-equivalente (já existe) que redireciona para `/cursos?paywall=1` caso alguém cole a URL diretamente. Trocar `window.location.href` por `navigate({ to: "/cursos", search: { paywall: "1" } })` para evitar full reload e perder estado React.
+### B. `src/routes/cursos.index.tsx` (admin inline)
 
-## Arquivos afetados
-- `src/routes/cursos.index.tsx` — trocar Links por buttons nos cards, carregar `user_roles`, corrigir helper `isSubscriptionActive`.
-- `src/routes/cursos.$videoId.tsx` — carregar `user_roles`, trocar `window.location.href` por `navigate`.
+Quando `isAdmin === true`:
+- **Header / navbar**: adicionar botões "Adicionar seção" e "Gerenciar serviços".
+- **Cada seção (carousel)**: ao lado do título da seção, botões "Editar", "Excluir" e "Fazer upload" (adicionar vídeo).
+- **Cada card de vídeo**: ícones de "Editar" e "Excluir" que aparecem em hover (não bloqueiam o clique normal de assistir).
+
+Modais (Mantine `Modal`, mesmo padrão do `/admin`):
+- **Modal de seção**: título, descrição, ordem (criar/editar).
+- **Modal de vídeo**: título, descrição, URL do vídeo, URL da thumbnail, ordem (criar/editar).
+- **Modal de serviços** ("Gerenciar serviços"): lista os serviços do banco com botões de editar/excluir + formulário para novo serviço (nome, descrição, duração em minutos, preço em BRL, ordem).
+
+Confirmação (`window.confirm`) antes de excluir seção/vídeo/serviço.
+Realtime já está ativo para `sections` e `videos`; adicionar canal para `services` também.
+
+Usuário comum continua vendo a página exatamente como hoje — nenhum botão de admin aparece.
+
+### C. `src/routes/agendamentos.tsx` + `src/lib/booking/data.ts`
+
+- Manter `availableSlots`, `brl` e `PREPAY_DISCOUNT` em `data.ts`.
+- Remover o array `services` hardcoded.
+- Em `agendamentos.tsx`, carregar `services` do Supabase em um `useEffect` (a tabela é leitura pública, sem necessidade de login).
+- Manter o tipo `Service` (com `durationMin` no front, mapeando `duration_min` do banco).
+
+### D. Painel `/admin`
+
+Sem mudanças — continua funcionando como atalho secundário. Os mesmos botões agora vivem também dentro de `/cursos`.
+
+---
 
 ## O que NÃO muda
-Layout, design, hero, animação do popup, fluxo de pagamento simulado, popup de sucesso, comentários, área admin, agendamentos, autenticação, RLS, seed.
 
-## Pergunta de validação
-Você está testando com qual conta?
-- `admin@afadadasunhas.com.br` → não deve ver popup (já é admin/ativo) ✅
-- `admin22@afadadasunhas.com.br` ou outra conta nova → deve ver popup; é onde o bug aparece.
-
-Se for o primeiro caso, posso te criar uma conta de teste sem assinatura para você validar visualmente o popup.
+- Fluxo de pagamento simulado, modais de paywall e sucesso, animações.
+- Layout, design tokens, hero, carrosséis, cores.
+- Autenticação, RLS de tabelas existentes, seed de vídeos.
+- Página `/admin` permanece acessível.
+- Comentários (já listados em `/admin` → aba Comentários).
