@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Calendar as CalendarIcon, Check, Clock, CreditCard, Wallet } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
@@ -7,7 +7,8 @@ import { DatePickerInput } from "@mantine/dates";
 import { TextInput, Textarea } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import dayjs from "dayjs";
-import { services, availableSlots, brl, PREPAY_DISCOUNT, type Service } from "@/lib/booking/data";
+import { availableSlots, brl, PREPAY_DISCOUNT, type Service } from "@/lib/booking/data";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/agendamentos")({
@@ -28,6 +29,14 @@ type PaymentChoice = "now" | "later" | null;
 function AgendamentosPage() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [services, setServices] = useState<Service[]>([]);
+  useEffect(() => {
+    supabase.from('services').select('*').order('order', { ascending: true }).then(({ data }) => {
+      setServices((data || []).map((s: any) => ({
+        id: s.id, name: s.name, description: s.description || '', durationMin: s.duration_min, price: Number(s.price),
+      })));
+    });
+  }, []);
   const [date, setDate] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
   const [name, setName] = useState("");

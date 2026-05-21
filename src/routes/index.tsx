@@ -5,7 +5,9 @@ import { BrandMark } from "@/components/brand-mark";
 import heroHands from "@/assets/hero-hands.jpg";
 import flatlay from "@/assets/services-flatlay.jpg";
 import teaching from "@/assets/courses-teaching.jpg";
-import { services, brl } from "@/lib/booking/data";
+import { brl, type Service } from "@/lib/booking/data";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,6 +31,14 @@ const fadeUp = {
 };
 
 function HomePage() {
+  const [services, setServices] = useState<Service[]>([]);
+  useEffect(() => {
+    supabase.from('services').select('*').order('order', { ascending: true }).then(({ data }) => {
+      setServices((data || []).map((s: any) => ({
+        id: s.id, name: s.name, description: s.description || '', durationMin: s.duration_min, price: Number(s.price),
+      })));
+    });
+  }, []);
   return (
     <>
       {/* HERO */}
