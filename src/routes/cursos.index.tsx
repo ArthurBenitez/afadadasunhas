@@ -255,9 +255,17 @@ function CursosHome() {
           <p className="text-xs uppercase tracking-[0.25em] text-[var(--sand)]/60">Bem-vinda</p>
           <h1 className="font-display text-2xl md:text-3xl">{profile?.full_name || session?.user?.email}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          {profile?.role === 'admin' && (
-            <Link to="/admin" className="rounded-full border border-[var(--sand)]/30 px-4 py-2 text-xs font-medium hover:bg-white/5">Admin</Link>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {isAdmin && (
+            <>
+              <button onClick={openNewSection} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-luxury hover:scale-[1.02]">
+                <Plus className="h-3.5 w-3.5" /> Adicionar seção
+              </button>
+              <button onClick={() => { resetServiceForm(); setServicesModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--sand)]/30 px-4 py-2 text-xs font-medium hover:bg-white/5">
+                <Settings className="h-3.5 w-3.5" /> Gerenciar serviços
+              </button>
+              <Link to="/admin" className="rounded-full border border-[var(--sand)]/30 px-4 py-2 text-xs font-medium hover:bg-white/5">Painel</Link>
+            </>
           )}
           <button onClick={handleLogout} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--sand)]/30 px-4 py-2 text-xs font-medium hover:bg-white/5">
             <LogOut className="h-3.5 w-3.5" /> Sair
@@ -298,20 +306,45 @@ function CursosHome() {
                     <h3 className="font-display text-2xl">{sec.title}</h3>
                     <p className="text-xs text-[var(--sand)]/60">{sec.description}</p>
                   </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => openNewVideo(sec.id, sec.videos?.length || 0)} className="inline-flex items-center gap-1.5 rounded-full bg-primary/90 px-3 py-1.5 text-[11px] font-semibold text-primary-foreground hover:scale-[1.02]">
+                        <Upload className="h-3 w-3" /> Fazer upload
+                      </button>
+                      <button onClick={() => openEditSection(sec)} className="grid h-7 w-7 place-items-center rounded-full border border-[var(--sand)]/30 hover:bg-white/5" title="Editar seção">
+                        <Edit2 className="h-3 w-3" />
+                      </button>
+                      <button onClick={() => deleteSection(sec.id)} className="grid h-7 w-7 place-items-center rounded-full border border-red-400/40 text-red-300 hover:bg-red-500/10" title="Excluir seção">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {sec.videos?.sort((a: any, b: any) => a.order - b.order).map((v: any) => (
-                    <button key={v.id} type="button" onClick={(e) => handleVideoClick(e, v.id)} className="group w-[78%] shrink-0 text-left sm:w-[42%] md:w-[28%] lg:w-[22%]">
-                      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+                    <div key={v.id} className="group relative w-[78%] shrink-0 sm:w-[42%] md:w-[28%] lg:w-[22%]">
+                      <button type="button" onClick={(e) => handleVideoClick(e, v.id)} className="block w-full text-left">
+                        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
                         <img src={v.thumbnail_url || "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?q=80&w=1000&auto=format&fit=crop"} alt={v.title} className="aspect-video w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
                         <span className="absolute inset-0 grid place-items-center opacity-0 transition-opacity group-hover:opacity-100">
                           <span className="grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-luxury">
                             <Play className="h-5 w-5 fill-current" />
                           </span>
                         </span>
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-sm font-medium">{v.title}</p>
-                    </button>
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-sm font-medium">{v.title}</p>
+                      </button>
+                      {isAdmin && (
+                        <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button onClick={() => openEditVideo(v)} className="grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white hover:bg-black" title="Editar vídeo">
+                            <Edit2 className="h-3 w-3" />
+                          </button>
+                          <button onClick={() => deleteVideo(v.id)} className="grid h-7 w-7 place-items-center rounded-full bg-red-600/90 text-white hover:bg-red-600" title="Excluir vídeo">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </section>
@@ -322,6 +355,11 @@ function CursosHome() {
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <h2 className="font-display text-2xl">Nenhum conteúdo disponível ainda.</h2>
           <p className="mt-2 text-[var(--sand)]/60">Aguarde as novidades da Afada das Unhas!</p>
+          {isAdmin && (
+            <button onClick={openNewSection} className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-luxury">
+              <Plus className="h-4 w-4" /> Criar primeira seção
+            </button>
+          )}
         </div>
       )}
 
