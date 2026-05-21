@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { LogOut, Play, CreditCard, Loader2, CheckCircle2 } from "lucide-react";
+import { LogOut, Play, CreditCard, Loader2, CheckCircle2, Plus, Edit2, Trash2, Upload, Settings, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Modal, Button, Text } from "@mantine/core";
+import { Modal, Button, Text, TextInput, Textarea, NumberInput } from "@mantine/core";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/cursos/")({
@@ -21,6 +21,29 @@ function CursosHome() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [activeExpiresAt, setActiveExpiresAt] = useState<string | null>(null);
+
+  // Admin modal state
+  const [sectionModal, setSectionModal] = useState<{ open: boolean; editing: any }>({ open: false, editing: null });
+  const [secTitle, setSecTitle] = useState("");
+  const [secDesc, setSecDesc] = useState("");
+  const [secOrder, setSecOrder] = useState<number | string>(0);
+
+  const [videoModal, setVideoModal] = useState<{ open: boolean; sectionId: string | null; editing: any }>({ open: false, sectionId: null, editing: null });
+  const [vidTitle, setVidTitle] = useState("");
+  const [vidDesc, setVidDesc] = useState("");
+  const [vidUrl, setVidUrl] = useState("");
+  const [vidThumb, setVidThumb] = useState("");
+  const [vidOrder, setVidOrder] = useState<number | string>(0);
+
+  const [servicesModalOpen, setServicesModalOpen] = useState(false);
+  const [services, setServices] = useState<any[]>([]);
+  const [editingService, setEditingService] = useState<any>(null);
+  const [svcName, setSvcName] = useState("");
+  const [svcDesc, setSvcDesc] = useState("");
+  const [svcDuration, setSvcDuration] = useState<number | string>(60);
+  const [svcPrice, setSvcPrice] = useState<number | string>(0);
+  const [svcOrder, setSvcOrder] = useState<number | string>(0);
+
   const navigate = useNavigate();
 
   const isSubscriptionActive = (sub: any, admin: boolean) => {
@@ -40,16 +63,18 @@ function CursosHome() {
       setSession(session);
 
       // Load profile, subscription, roles and sections
-      const [profileRes, subRes, sectionsRes, rolesRes] = await Promise.all([
+      const [profileRes, subRes, sectionsRes, rolesRes, servicesRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('subscriptions').select('*').eq('user_id', session.user.id).maybeSingle(),
         supabase.from('sections').select('*, videos(*)').order('order', { ascending: true }),
         supabase.from('user_roles').select('role').eq('user_id', session.user.id),
+        supabase.from('services').select('*').order('order', { ascending: true }),
       ]);
 
       setProfile(profileRes.data);
       setSubscription(subRes.data);
       setSections(sectionsRes.data || []);
+      setServices(servicesRes.data || []);
       const admin = (rolesRes.data || []).some((r: any) => r.role === 'admin')
         || profileRes.data?.role === 'admin';
       setIsAdmin(admin);
@@ -75,6 +100,9 @@ function CursosHome() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, () => {
         loadData();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
+        loadData();
+      })
       .subscribe();
 
     return () => {
@@ -85,6 +113,90 @@ function CursosHome() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/cursos" });
+  };
+
+  // ===== Section CRUD =====
+  const openNewSection = () => {
+    setSecTitle(""); setSecDesc(""); setSecOrder(sections.length);
+    setSectionModal({ open: true, editing: null });
+  };
+  const openEditSection = (sec: any) => {
+    setSecTitle(sec.title); setSecDesc(sec.description || ""); setSecOrder(sec.order);
+    setSectionModal({ open: true, editing: sec });
+  };
+  const saveSection = async () => {
+    if (!secTitle.trim()) return;
+    const payload = { title: secTitle, description: secDesc, order: Number(secOrder) || 0 };
+    const res = sectionModal.editing
+      ? await supabase.from('sections').update(payload).eq('id', sectionModal.editing.id)
+      : await supabase.from('sections').insert([payload]);
+    if (res.error) return toast.error("Erro ao salvar seção");
+    toast.success(sectionModal.editing ? "Seção atualizada" : "Seção criada");
+    setSectionModal({ open: false, editing: null });
+  };
+  const deleteSection = async (id: string) => {
+    if (!confirm("Excluir esta seção e todos os seus vídeos?")) return;
+    const { error } = await supabase.from('sections').delete().eq('id', id);
+    if (error) toast.error("Erro ao excluir"); else toast.success("Seção excluída");
+  };
+
+  // ===== Video CRUD =====
+  const openNewVideo = (sectionId: string, currentCount: number) => {
+    setVidTitle(""); setVidDesc(""); setVidUrl(""); setVidThumb(""); setVidOrder(currentCount);
+    setVideoModal({ open: true, sectionId, editing: null });
+  };
+  const openEditVideo = (v: any) => {
+    setVidTitle(v.title); setVidDesc(v.description || ""); setVidUrl(v.video_url); setVidThumb(v.thumbnail_url || ""); setVidOrder(v.order);
+    setVideoModal({ open: true, sectionId: v.section_id, editing: v });
+  };
+  const saveVideo = async () => {
+    if (!vidTitle.trim() || !vidUrl.trim() || !videoModal.sectionId) return;
+    const payload = {
+      section_id: videoModal.sectionId,
+      title: vidTitle, description: vidDesc, video_url: vidUrl,
+      thumbnail_url: vidThumb || null, order: Number(vidOrder) || 0,
+    };
+    const res = videoModal.editing
+      ? await supabase.from('videos').update(payload).eq('id', videoModal.editing.id)
+      : await supabase.from('videos').insert([payload]);
+    if (res.error) return toast.error("Erro ao salvar vídeo");
+    toast.success(videoModal.editing ? "Vídeo atualizado" : "Vídeo adicionado");
+    setVideoModal({ open: false, sectionId: null, editing: null });
+  };
+  const deleteVideo = async (id: string) => {
+    if (!confirm("Excluir este vídeo?")) return;
+    const { error } = await supabase.from('videos').delete().eq('id', id);
+    if (error) toast.error("Erro ao excluir"); else toast.success("Vídeo excluído");
+  };
+
+  // ===== Service CRUD =====
+  const resetServiceForm = () => {
+    setEditingService(null);
+    setSvcName(""); setSvcDesc(""); setSvcDuration(60); setSvcPrice(0); setSvcOrder(services.length);
+  };
+  const openEditService = (s: any) => {
+    setEditingService(s);
+    setSvcName(s.name); setSvcDesc(s.description || "");
+    setSvcDuration(s.duration_min); setSvcPrice(Number(s.price)); setSvcOrder(s.order);
+  };
+  const saveService = async () => {
+    if (!svcName.trim()) return;
+    const payload = {
+      name: svcName, description: svcDesc,
+      duration_min: Number(svcDuration) || 0, price: Number(svcPrice) || 0,
+      order: Number(svcOrder) || 0,
+    };
+    const res = editingService
+      ? await supabase.from('services').update(payload).eq('id', editingService.id)
+      : await supabase.from('services').insert([payload]);
+    if (res.error) return toast.error("Erro ao salvar serviço");
+    toast.success(editingService ? "Serviço atualizado" : "Serviço criado");
+    resetServiceForm();
+  };
+  const deleteService = async (id: string) => {
+    if (!confirm("Excluir este serviço?")) return;
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    if (error) toast.error("Erro ao excluir"); else toast.success("Serviço excluído");
   };
 
   const handleVideoClick = (e: React.MouseEvent, videoId: string) => {
