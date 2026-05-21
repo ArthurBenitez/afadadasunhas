@@ -445,6 +445,83 @@ function CursosHome() {
           </Button>
         </motion.div>
       </Modal>
+
+      {/* Admin: Section Modal */}
+      <Modal
+        opened={sectionModal.open}
+        onClose={() => setSectionModal({ open: false, editing: null })}
+        title={<span className="font-display text-lg">{sectionModal.editing ? "Editar seção" : "Nova seção"}</span>}
+        centered radius="lg"
+      >
+        <div className="space-y-3">
+          <TextInput label="Título" value={secTitle} onChange={(e) => setSecTitle(e.currentTarget.value)} required />
+          <Textarea label="Descrição" value={secDesc} onChange={(e) => setSecDesc(e.currentTarget.value)} rows={3} />
+          <NumberInput label="Ordem" value={secOrder} onChange={setSecOrder} min={0} />
+          <Button fullWidth onClick={saveSection} className="mt-2 bg-gradient-luxe">Salvar</Button>
+        </div>
+      </Modal>
+
+      {/* Admin: Video Modal */}
+      <Modal
+        opened={videoModal.open}
+        onClose={() => setVideoModal({ open: false, sectionId: null, editing: null })}
+        title={<span className="font-display text-lg">{videoModal.editing ? "Editar vídeo" : "Adicionar vídeo"}</span>}
+        centered radius="lg"
+      >
+        <div className="space-y-3">
+          <TextInput label="Título" value={vidTitle} onChange={(e) => setVidTitle(e.currentTarget.value)} required />
+          <Textarea label="Descrição" value={vidDesc} onChange={(e) => setVidDesc(e.currentTarget.value)} rows={3} />
+          <TextInput label="URL do vídeo" placeholder="https://..." value={vidUrl} onChange={(e) => setVidUrl(e.currentTarget.value)} required />
+          <TextInput label="URL da thumbnail" placeholder="https://..." value={vidThumb} onChange={(e) => setVidThumb(e.currentTarget.value)} />
+          <NumberInput label="Ordem" value={vidOrder} onChange={setVidOrder} min={0} />
+          <Button fullWidth onClick={saveVideo} className="mt-2 bg-gradient-luxe">Salvar</Button>
+        </div>
+      </Modal>
+
+      {/* Admin: Services Modal */}
+      <Modal
+        opened={servicesModalOpen}
+        onClose={() => setServicesModalOpen(false)}
+        title={<span className="font-display text-lg">Gerenciar serviços</span>}
+        centered radius="lg" size="lg"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* List */}
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            {services.length === 0 && <p className="text-xs text-gray-500">Nenhum serviço ainda.</p>}
+            {services.map((s) => (
+              <div key={s.id} className={`rounded-lg border p-3 text-sm ${editingService?.id === s.id ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{s.name}</p>
+                    <p className="text-[11px] text-gray-500">{s.duration_min} min · R$ {Number(s.price).toFixed(2)}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => openEditService(s)} className="grid h-7 w-7 place-items-center rounded-full border hover:bg-gray-50" title="Editar"><Edit2 className="h-3 w-3" /></button>
+                    <button onClick={() => deleteService(s.id)} className="grid h-7 w-7 place-items-center rounded-full border border-red-300 text-red-600 hover:bg-red-50" title="Excluir"><Trash2 className="h-3 w-3" /></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Form */}
+          <div className="space-y-2 border-l md:pl-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">{editingService ? "Editar serviço" : "Novo serviço"}</p>
+              {editingService && (
+                <button onClick={resetServiceForm} className="text-xs text-gray-500 hover:text-gray-900 inline-flex items-center gap-1"><X className="h-3 w-3" /> Cancelar</button>
+              )}
+            </div>
+            <TextInput label="Título" value={svcName} onChange={(e) => setSvcName(e.currentTarget.value)} required size="xs" />
+            <Textarea label="Descrição" value={svcDesc} onChange={(e) => setSvcDesc(e.currentTarget.value)} rows={2} size="xs" />
+            <NumberInput label="Duração (min)" value={svcDuration} onChange={setSvcDuration} min={1} size="xs" />
+            <NumberInput label="Preço (R$)" value={svcPrice} onChange={setSvcPrice} min={0} decimalScale={2} fixedDecimalScale size="xs" />
+            <NumberInput label="Ordem" value={svcOrder} onChange={setSvcOrder} min={0} size="xs" />
+            <Button fullWidth onClick={saveService} className="mt-2 bg-gradient-luxe" size="sm">{editingService ? "Atualizar" : "Adicionar"}</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
