@@ -34,6 +34,9 @@ function CursosHome() {
   const [vidUrl, setVidUrl] = useState("");
   const [vidThumb, setVidThumb] = useState("");
   const [vidOrder, setVidOrder] = useState<number | string>(0);
+  const [vidFile, setVidFile] = useState<File | null>(null);
+  const [vidThumbFile, setVidThumbFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const [servicesModalOpen, setServicesModalOpen] = useState(false);
   const [services, setServices] = useState<any[]>([]);
@@ -143,25 +146,64 @@ function CursosHome() {
   // ===== Video CRUD =====
   const openNewVideo = (sectionId: string, currentCount: number) => {
     setVidTitle(""); setVidDesc(""); setVidUrl(""); setVidThumb(""); setVidOrder(currentCount);
+    setVidFile(null); setVidThumbFile(null);
     setVideoModal({ open: true, sectionId, editing: null });
   };
   const openEditVideo = (v: any) => {
     setVidTitle(v.title); setVidDesc(v.description || ""); setVidUrl(v.video_url); setVidThumb(v.thumbnail_url || ""); setVidOrder(v.order);
+    setVidFile(null); setVidThumbFile(null);
     setVideoModal({ open: true, sectionId: v.section_id, editing: v });
   };
   const saveVideo = async () => {
-    if (!vidTitle.trim() || !vidUrl.trim() || !videoModal.sectionId) return;
-    const payload = {
-      section_id: videoModal.sectionId,
-      title: vidTitle, description: vidDesc, video_url: vidUrl,
-      thumbnail_url: vidThumb || null, order: Number(vidOrder) || 0,
-    };
-    const res = videoModal.editing
-      ? await supabase.from('videos').update(payload).eq('id', videoModal.editing.id)
-      : await supabase.from('videos').insert([payload]);
-    if (res.error) return toast.error("Erro ao salvar vídeo");
-    toast.success(videoModal.editing ? "Vídeo atualizado" : "Vídeo adicionado");
-    setVideoModal({ open: false, sectionId: null, editing: null });
+    if (!vidTitle.trim() || !videoModal.sectionId) return;
+    if (!videoModal.editing && !vidFile) {
+      return toast.error("Selecione o arquivo de vídeo");
+    }
+    setUploading(true);
+    try {
+      let videoUrl = vidUrl;
+      let thumbUrl = vidThumb;
+      const userId = session?.user?.id ?? "anon";
+
+      if (vidFile) {
+        const path = `${userId}/${crypto.randomUUID()}-${vidFile.name.replace(/[^\w.\-]/g, "_")}`;
+        const up = await supabase.storage.from('course-videos').upload(path, vidFile, {
+          contentType: vidFile.type, upsert: false,
+        });
+        if (up.error) throw up.error;
+        videoUrl = supabase.storage.from('course-videos').getPublicUrl(path).data.publicUrl;
+      }
+
+      if (vidThumbFile) {
+        const path = `${userId}/${crypto.randomUUID()}-${vidThumbFile.name.replace(/[^\w.\-]/g, "_")}`;
+        const up = await supabase.storage.from('course-thumbnails').upload(path, vidThumbFile, {
+          contentType: vidThumbFile.type, upsert: false,
+        });
+        if (up.error) throw up.error;
+        thumbUrl = supabase.storage.from('course-thumbnails').getPublicUrl(path).data.publicUrl;
+      }
+
+      if (!videoUrl) {
+        toast.error("Arquivo de vídeo é obrigatório");
+        return;
+      }
+
+      const payload = {
+        section_id: videoModal.sectionId,
+        title: vidTitle, description: vidDesc, video_url: videoUrl,
+        thumbnail_url: thumbUrl || null, order: Number(vidOrder) || 0,
+      };
+      const res = videoModal.editing
+        ? await supabase.from('videos').update(payload).eq('id', videoModal.editing.id)
+        : await supabase.from('videos').insert([payload]);
+      if (res.error) throw res.error;
+      toast.success(videoModal.editing ? "Vídeo atualizado" : "Vídeo adicionado");
+      setVideoModal({ open: false, sectionId: null, editing: null });
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao salvar vídeo");
+    } finally {
+      setUploading(false);
+    }
   };
   const deleteVideo = async (id: string) => {
     if (!confirm("Excluir este vídeo?")) return;
@@ -471,10 +513,41 @@ function CursosHome() {
         <div className="space-y-3">
           <TextInput label="Título" value={vidTitle} onChange={(e) => setVidTitle(e.currentTarget.value)} required />
           <Textarea label="Descrição" value={vidDesc} onChange={(e) => setVidDesc(e.currentTarget.value)} rows={3} />
-          <TextInput label="URL do vídeo" placeholder="https://..." value={vidUrl} onChange={(e) => setVidUrl(e.currentTarget.value)} required />
-          <TextInput label="URL da thumbnail" placeholder="https://..." value={vidThumb} onChange={(e) => setVidThumb(e.currentTarget.value)} />
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-[var(--cocoa)]">
+              Arquivo de vídeo {videoModal.editing ? "(opcional — manter atual)" : "*"}
+            </label>
+            {videoModal.editing && vidUrl && !vidFile && (
+              <video src={vidUrl} controls className="mb-1 max-h-32 w-full rounded-md bg-black" />
+            )}
+            <input
+              type="file"
+              accept="video/*"
+              onChange={(e) => setVidFile(e.currentTarget.files?.[0] ?? null)}
+              className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary-foreground"
+            />
+            {vidFile && <p className="text-xs text-[var(--cocoa)]/70">{vidFile.name} ({(vidFile.size / 1024 / 1024).toFixed(1)} MB)</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-[var(--cocoa)]">Imagem de capa (opcional)</label>
+            {videoModal.editing && vidThumb && !vidThumbFile && (
+              <img src={vidThumb} alt="Thumb atual" className="mb-1 max-h-24 rounded-md object-cover" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setVidThumbFile(e.currentTarget.files?.[0] ?? null)}
+              className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary-foreground"
+            />
+            {vidThumbFile && <p className="text-xs text-[var(--cocoa)]/70">{vidThumbFile.name}</p>}
+          </div>
+
           <NumberInput label="Ordem" value={vidOrder} onChange={setVidOrder} min={0} />
-          <Button fullWidth onClick={saveVideo} className="mt-2 bg-gradient-luxe">Salvar</Button>
+          <Button fullWidth onClick={saveVideo} disabled={uploading} loading={uploading} className="mt-2 bg-gradient-luxe">
+            {uploading ? "Enviando..." : "Salvar"}
+          </Button>
         </div>
       </Modal>
 
