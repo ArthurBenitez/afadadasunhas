@@ -513,10 +513,41 @@ function CursosHome() {
         <div className="space-y-3">
           <TextInput label="Título" value={vidTitle} onChange={(e) => setVidTitle(e.currentTarget.value)} required />
           <Textarea label="Descrição" value={vidDesc} onChange={(e) => setVidDesc(e.currentTarget.value)} rows={3} />
-          <TextInput label="URL do vídeo" placeholder="https://..." value={vidUrl} onChange={(e) => setVidUrl(e.currentTarget.value)} required />
-          <TextInput label="URL da thumbnail" placeholder="https://..." value={vidThumb} onChange={(e) => setVidThumb(e.currentTarget.value)} />
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-[var(--cocoa)]">
+              Arquivo de vídeo {videoModal.editing ? "(opcional — manter atual)" : "*"}
+            </label>
+            {videoModal.editing && vidUrl && !vidFile && (
+              <video src={vidUrl} controls className="mb-1 max-h-32 w-full rounded-md bg-black" />
+            )}
+            <input
+              type="file"
+              accept="video/*"
+              onChange={(e) => setVidFile(e.currentTarget.files?.[0] ?? null)}
+              className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary-foreground"
+            />
+            {vidFile && <p className="text-xs text-[var(--cocoa)]/70">{vidFile.name} ({(vidFile.size / 1024 / 1024).toFixed(1)} MB)</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-[var(--cocoa)]">Imagem de capa (opcional)</label>
+            {videoModal.editing && vidThumb && !vidThumbFile && (
+              <img src={vidThumb} alt="Thumb atual" className="mb-1 max-h-24 rounded-md object-cover" />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setVidThumbFile(e.currentTarget.files?.[0] ?? null)}
+              className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary-foreground"
+            />
+            {vidThumbFile && <p className="text-xs text-[var(--cocoa)]/70">{vidThumbFile.name}</p>}
+          </div>
+
           <NumberInput label="Ordem" value={vidOrder} onChange={setVidOrder} min={0} />
-          <Button fullWidth onClick={saveVideo} className="mt-2 bg-gradient-luxe">Salvar</Button>
+          <Button fullWidth onClick={saveVideo} disabled={uploading} loading={uploading} className="mt-2 bg-gradient-luxe">
+            {uploading ? "Enviando..." : "Salvar"}
+          </Button>
         </div>
       </Modal>
 
