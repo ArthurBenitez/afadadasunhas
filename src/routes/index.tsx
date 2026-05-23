@@ -100,7 +100,7 @@ function HomePage() {
             <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-[2rem] shadow-luxury md:max-w-md">
               <img
                 src={heroHands}
-                alt="Mãos com manicure marsala impecável"
+                alt="Profissional da A fada das Unhas com luvas pretas"
                 className="h-full w-full object-cover"
                 width={1080}
                 height={1440}
