@@ -9,9 +9,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/cursos")({
   head: () => ({
     meta: [
-      { title: "Cursos — Afada das Unhas" },
+      { title: "Cursos — A fada das Unhas" },
       { name: "description", content: "Cursos exclusivos de manicure e nail art para assinantes." },
-      { property: "og:title", content: "Cursos — Afada das Unhas" },
+      { property: "og:title", content: "Cursos — A fada das Unhas" },
       { property: "og:url", content: "/cursos" },
     ],
     links: [{ rel: "canonical", href: "/cursos" }],

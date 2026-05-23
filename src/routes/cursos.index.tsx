@@ -396,7 +396,7 @@ function CursosHome() {
       ) : (
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <h2 className="font-display text-2xl">Nenhum conteúdo disponível ainda.</h2>
-          <p className="mt-2 text-[var(--sand)]/60">Aguarde as novidades da Afada das Unhas!</p>
+          <p className="mt-2 text-[var(--sand)]/60">Aguarde as novidades da A fada das Unhas!</p>
           {isAdmin && (
             <button onClick={openNewSection} className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-luxury">
               <Plus className="h-4 w-4" /> Criar primeira seção
@@ -428,7 +428,7 @@ function CursosHome() {
           </div>
           <Text size="xl" fw={700} className="mt-4 font-display text-[var(--sand)]">Você ainda não pagou a mensalidade do curso!</Text>
           <Text size="sm" className="mt-2 text-[var(--sand)]/70">
-            Para acessar todo o conteúdo exclusivo da Afada das Unhas, você precisa ter uma assinatura ativa.
+            Para acessar todo o conteúdo exclusivo da A fada das Unhas, você precisa ter uma assinatura ativa.
           </Text>
           <Button 
             fullWidth 

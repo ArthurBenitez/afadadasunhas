@@ -41,7 +41,7 @@ export function SiteHeader() {
         <Link to="/" className="group flex items-center gap-2" onClick={() => setOpen(false)}>
           <BrandMark className="h-9 w-9 shadow-soft rounded-full" />
           <span className="font-display text-xl text-primary leading-none">
-            afada<span className="text-foreground/70">.</span>
+            a fada<span className="text-foreground/70">.</span>
           </span>
         </Link>
 

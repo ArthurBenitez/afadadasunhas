@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/agendamentos")({
   head: () => ({
     meta: [
-      { title: "Agendamentos — Afada das Unhas" },
+      { title: "Agendamentos — A fada das Unhas" },
       { name: "description", content: "Escolha seus serviços, data e horário e finalize seu agendamento em poucos cliques." },
-      { property: "og:title", content: "Agendamentos — Afada das Unhas" },
+      { property: "og:title", content: "Agendamentos — A fada das Unhas" },
       { property: "og:url", content: "/agendamentos" },
     ],
     links: [{ rel: "canonical", href: "/agendamentos" }],
