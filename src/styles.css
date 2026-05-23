@@ -139,3 +139,7 @@
   .shadow-luxury { box-shadow: var(--shadow-luxury); }
   .shadow-soft { box-shadow: var(--shadow-soft); }
 }
+
+#lovable-badge { 
+  display: none !important; 
+}
