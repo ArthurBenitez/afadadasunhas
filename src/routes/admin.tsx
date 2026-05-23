@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Painel Administrativo — Afada das Unhas" },
+      { title: "Painel Administrativo — A fada das Unhas" },
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),

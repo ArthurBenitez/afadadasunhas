@@ -12,9 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Afada das Unhas — Estúdio premium e cursos" },
-      { name: "description", content: "Unhas impecáveis em um estúdio acolhedor. Agende seu horário ou inscreva-se nos cursos exclusivos da Afada das Unhas." },
-      { property: "og:title", content: "Afada das Unhas — Estúdio premium e cursos" },
+      { title: "A fada das Unhas — Estúdio premium e cursos" },
+      { name: "description", content: "Unhas impecáveis em um estúdio acolhedor. Agende seu horário ou inscreva-se nos cursos exclusivos da A fada das Unhas." },
+      { property: "og:title", content: "A fada das Unhas — Estúdio premium e cursos" },
       { property: "og:description", content: "Unhas impecáveis em um estúdio acolhedor. Agende seu horário ou inscreva-se nos cursos exclusivos." },
       { property: "og:url", content: "/" },
     ],
