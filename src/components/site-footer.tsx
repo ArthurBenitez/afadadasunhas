@@ -15,6 +15,7 @@ export function SiteFooter() {
           <p className="font-semibold text-foreground">Navegação</p>
           <Link to="/agendamentos" className="block text-muted-foreground hover:text-primary">Agendamentos</Link>
           <Link to="/cursos" className="block text-muted-foreground hover:text-primary">Cursos</Link>
+          <Link to="/marketplace" className="block text-muted-foreground hover:text-primary">Marketplace</Link>
         </div>
         <div className="space-y-2 text-sm text-muted-foreground">
           <p className="font-semibold text-foreground">Contato</p>

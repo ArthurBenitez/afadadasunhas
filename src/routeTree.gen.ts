@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as CursosRouteImport } from './routes/cursos'
 import { Route as AgendamentosRouteImport } from './routes/agendamentos'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -16,6 +17,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CursosIndexRouteImport } from './routes/cursos.index'
 import { Route as CursosVideoIdRouteImport } from './routes/cursos.$videoId'
 
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CursosRoute = CursosRouteImport.update({
   id: '/cursos',
   path: '/cursos',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/agendamentos': typeof AgendamentosRoute
   '/cursos': typeof CursosRouteWithChildren
+  '/marketplace': typeof MarketplaceRoute
   '/cursos/$videoId': typeof CursosVideoIdRoute
   '/cursos/': typeof CursosIndexRoute
 }
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/agendamentos': typeof AgendamentosRoute
+  '/marketplace': typeof MarketplaceRoute
   '/cursos/$videoId': typeof CursosVideoIdRoute
   '/cursos': typeof CursosIndexRoute
 }
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/agendamentos': typeof AgendamentosRoute
   '/cursos': typeof CursosRouteWithChildren
+  '/marketplace': typeof MarketplaceRoute
   '/cursos/$videoId': typeof CursosVideoIdRoute
   '/cursos/': typeof CursosIndexRoute
 }
@@ -78,16 +87,24 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agendamentos'
     | '/cursos'
+    | '/marketplace'
     | '/cursos/$videoId'
     | '/cursos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/agendamentos' | '/cursos/$videoId' | '/cursos'
+  to:
+    | '/'
+    | '/admin'
+    | '/agendamentos'
+    | '/marketplace'
+    | '/cursos/$videoId'
+    | '/cursos'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/agendamentos'
     | '/cursos'
+    | '/marketplace'
     | '/cursos/$videoId'
     | '/cursos/'
   fileRoutesById: FileRoutesById
@@ -97,10 +114,18 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AgendamentosRoute: typeof AgendamentosRoute
   CursosRoute: typeof CursosRouteWithChildren
+  MarketplaceRoute: typeof MarketplaceRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cursos': {
       id: '/cursos'
       path: '/cursos'
@@ -164,7 +189,18 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AgendamentosRoute: AgendamentosRoute,
   CursosRoute: CursosRouteWithChildren,
+  MarketplaceRoute: MarketplaceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
