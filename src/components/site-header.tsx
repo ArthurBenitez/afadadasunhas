@@ -9,6 +9,7 @@ const navItems = [
   { to: "/", label: "Início" },
   { to: "/agendamentos", label: "Agendamentos" },
   { to: "/cursos", label: "Cursos" },
+  { to: "/marketplace", label: "Marketplace" },
 ];
 
 export function SiteHeader() {
