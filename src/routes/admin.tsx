@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Calendar, FilmIcon, MessageSquare, ShieldAlert, Plus, Edit2, Trash2, Upload, Loader2, X } from "lucide-react";
+import { Calendar, FilmIcon, MessageSquare, ShieldAlert, Plus, Edit2, Trash2, Upload, Loader2, X, ShoppingBag, ExternalLink } from "lucide-react";
 import { Tabs, Modal, TextInput, Textarea, Button, NumberInput, Group } from "@mantine/core";
 import { supabase } from "@/integrations/supabase/client";
 import { brl } from "@/lib/booking/data";
@@ -23,6 +23,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const navigate = useNavigate();
 
   // Modal states
@@ -30,6 +31,16 @@ function AdminPage() {
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<any>(null);
   const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
+
+  // Product modal state
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [productName, setProductName] = useState("");
+  const [productDesc, setProductDesc] = useState("");
+  const [productImage, setProductImage] = useState("");
+  const [productPrice, setProductPrice] = useState<number>(0);
+  const [productLink, setProductLink] = useState("");
+  const [productOrder, setProductOrder] = useState(0);
 
   // Form states
   const [sectionTitle, setSectionTitle] = useState("");
@@ -58,13 +69,15 @@ function AdminPage() {
     setProfile(profile);
 
     // Load content
-    const [secRes, comRes] = await Promise.all([
+    const [secRes, comRes, prodRes] = await Promise.all([
       supabase.from('sections').select('*, videos(*)').order('order', { ascending: true }),
-      supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(20)
+      supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(20),
+      supabase.from('products').select('*').order('order', { ascending: true })
     ]);
 
     setSections(secRes.data || []);
     setComments(comRes.data || []);
+    setProducts(prodRes.data || []);
     setLoading(false);
   };
 
@@ -76,10 +89,64 @@ function AdminPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sections' }, loadInitialData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, loadInitialData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, loadInitialData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, loadInitialData)
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  const openNewProduct = () => {
+    setEditingProduct(null);
+    setProductName("");
+    setProductDesc("");
+    setProductImage("");
+    setProductPrice(0);
+    setProductLink("");
+    setProductOrder(products.length);
+    setProductModalOpen(true);
+  };
+
+  const openEditProduct = (p: any) => {
+    setEditingProduct(p);
+    setProductName(p.name);
+    setProductDesc(p.description || "");
+    setProductImage(p.image_url || "");
+    setProductPrice(Number(p.price));
+    setProductLink(p.external_url);
+    setProductOrder(p.order);
+    setProductModalOpen(true);
+  };
+
+  const handleSaveProduct = async () => {
+    if (!productName || !productLink) {
+      toast.error("Nome e link de destino são obrigatórios");
+      return;
+    }
+    const payload = {
+      name: productName,
+      description: productDesc || null,
+      image_url: productImage || null,
+      price: productPrice,
+      external_url: productLink,
+      order: productOrder,
+    };
+    const { error } = editingProduct
+      ? await supabase.from('products').update(payload).eq('id', editingProduct.id)
+      : await supabase.from('products').insert([payload]);
+    if (error) {
+      toast.error("Erro ao salvar produto");
+    } else {
+      toast.success(editingProduct ? "Produto atualizado" : "Produto criado");
+      setProductModalOpen(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm("Excluir este produto?")) return;
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) toast.error("Erro ao excluir");
+    else toast.success("Produto excluído");
+  };
 
   const handleSaveSection = async () => {
     if (!sectionTitle) return;
@@ -188,6 +255,7 @@ function AdminPage() {
       <Tabs defaultValue="courses" mt="xl" variant="pills" radius="md">
         <Tabs.List grow>
           <Tabs.Tab value="courses" leftSection={<FilmIcon size={16} />}>Cursos / Netflix</Tabs.Tab>
+          <Tabs.Tab value="products" leftSection={<ShoppingBag size={16} />}>Produtos</Tabs.Tab>
           <Tabs.Tab value="comments" leftSection={<MessageSquare size={16} />}>Comentários</Tabs.Tab>
           <Tabs.Tab value="bookings" leftSection={<Calendar size={16} />}>Agendamentos (Mock)</Tabs.Tab>
         </Tabs.List>
@@ -261,6 +329,73 @@ function AdminPage() {
           </div>
         </Tabs.Panel>
 
+        <Tabs.Panel value="products" pt="lg">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">{products.length} produto(s) cadastrado(s)</p>
+            <button
+              onClick={openNewProduct}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-luxury"
+            >
+              <Plus size={18} /> Adicionar produto
+            </button>
+          </div>
+
+          {products.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
+              <ShoppingBag className="mx-auto h-10 w-10 text-muted-foreground/30" />
+              <p className="mt-3 text-muted-foreground">Nenhum produto cadastrado ainda.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map((p) => (
+                <article key={p.id} className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+                  <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-muted-foreground/30">
+                        <ShoppingBag className="h-8 w-8" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        onClick={() => openEditProduct(p)}
+                        className="p-2 rounded-full bg-white/90 text-foreground hover:bg-white"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProduct(p.id)}
+                        className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-display text-lg text-foreground line-clamp-1">{p.name}</h3>
+                      <span className="font-semibold text-primary">{brl(Number(p.price))}</span>
+                    </div>
+                    {p.description && (
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
+                    )}
+                    <a
+                      href={p.external_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                    >
+                      <ExternalLink size={12} /> Abrir link
+                    </a>
+                    <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">Ordem: {p.order}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </Tabs.Panel>
+
         <Tabs.Panel value="comments" pt="lg">
           <div className="space-y-3">
             {comments.length > 0 ? comments.map((c) => (
@@ -322,6 +457,27 @@ function AdminPage() {
           <TextInput label="URL da Thumbnail (Capa)" placeholder="https://..." value={videoThumb} onChange={(e) => setVideoThumb(e.target.value)} description="Deixe em branco para usar uma padrão." />
           <NumberInput label="Ordem" value={videoOrder} onChange={(v) => setVideoOrder(Number(v))} min={0} />
           <Button fullWidth onClick={handleSaveVideo} className="mt-4 bg-primary">Adicionar Vídeo</Button>
+        </div>
+      </Modal>
+
+      {/* Product Modal */}
+      <Modal
+        opened={productModalOpen}
+        onClose={() => setProductModalOpen(false)}
+        title={<span className="font-display text-xl">{editingProduct ? "Editar Produto" : "Adicionar Produto"}</span>}
+        centered
+        radius="lg"
+      >
+        <div className="space-y-4">
+          <TextInput label="Nome do produto" placeholder="Ex: Esmalte Marsala Premium" value={productName} onChange={(e) => setProductName(e.target.value)} required />
+          <Textarea label="Descrição" placeholder="Detalhes do produto" value={productDesc} onChange={(e) => setProductDesc(e.target.value)} rows={3} />
+          <TextInput label="URL da Foto" placeholder="https://..." value={productImage} onChange={(e) => setProductImage(e.target.value)} description="Cole o link de uma imagem do produto." />
+          <NumberInput label="Preço (R$)" value={productPrice} onChange={(v) => setProductPrice(Number(v))} min={0} decimalScale={2} fixedDecimalScale step={0.01} />
+          <TextInput label="Link de destino" placeholder="https://loja.com/produto" value={productLink} onChange={(e) => setProductLink(e.target.value)} required description="Para onde o cliente será encaminhado ao clicar." />
+          <NumberInput label="Ordem de exibição" value={productOrder} onChange={(v) => setProductOrder(Number(v))} min={0} />
+          <Button fullWidth onClick={handleSaveProduct} className="mt-4 bg-primary">
+            {editingProduct ? "Salvar alterações" : "Adicionar produto"}
+          </Button>
         </div>
       </Modal>
     </div>
