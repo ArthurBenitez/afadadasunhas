@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { LogOut, Play, CreditCard, Loader2, CheckCircle2, Plus, Edit2, Trash2, Upload, Settings, X } from "lucide-react";
+import { LogOut, Play, CreditCard, Loader2, CheckCircle2, Plus, Edit2, Trash2, Upload, Settings, X, ShoppingBag } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Modal, Button, Text, TextInput, Textarea, NumberInput } from "@mantine/core";
@@ -47,6 +47,17 @@ function CursosHome() {
   const [svcPrice, setSvcPrice] = useState<number | string>(0);
   const [svcOrder, setSvcOrder] = useState<number | string>(0);
 
+  // Product state
+  const [productsModalOpen, setProductsModalOpen] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [prodName, setProdName] = useState("");
+  const [prodDesc, setProdDesc] = useState("");
+  const [prodImage, setProdImage] = useState("");
+  const [prodPrice, setProdPrice] = useState<number | string>(0);
+  const [prodLink, setProdLink] = useState("");
+  const [prodOrder, setProdOrder] = useState<number | string>(0);
+
   const navigate = useNavigate();
 
   const isSubscriptionActive = (sub: any, admin: boolean) => {
@@ -66,18 +77,20 @@ function CursosHome() {
       setSession(session);
 
       // Load profile, subscription, roles and sections
-      const [profileRes, subRes, sectionsRes, rolesRes, servicesRes] = await Promise.all([
+      const [profileRes, subRes, sectionsRes, rolesRes, servicesRes, productsRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('subscriptions').select('*').eq('user_id', session.user.id).maybeSingle(),
         supabase.from('sections').select('*, videos(*)').order('order', { ascending: true }),
         supabase.from('user_roles').select('role').eq('user_id', session.user.id),
         supabase.from('services').select('*').order('order', { ascending: true }),
+        supabase.from('products').select('*').order('order', { ascending: true }),
       ]);
 
       setProfile(profileRes.data);
       setSubscription(subRes.data);
       setSections(sectionsRes.data || []);
       setServices(servicesRes.data || []);
+      setProducts(productsRes.data || []);
       const admin = (rolesRes.data || []).some((r: any) => r.role === 'admin')
         || profileRes.data?.role === 'admin';
       setIsAdmin(admin);
@@ -104,6 +117,9 @@ function CursosHome() {
         loadData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
         loadData();
       })
       .subscribe();
@@ -239,6 +255,43 @@ function CursosHome() {
     if (!confirm("Excluir este serviço?")) return;
     const { error } = await supabase.from('services').delete().eq('id', id);
     if (error) toast.error("Erro ao excluir"); else toast.success("Serviço excluído");
+  };
+
+  // ===== Product CRUD =====
+  const resetProductForm = () => {
+    setEditingProduct(null);
+    setProdName(""); setProdDesc(""); setProdImage("");
+    setProdPrice(0); setProdLink(""); setProdOrder(products.length);
+  };
+  const openEditProduct = (p: any) => {
+    setEditingProduct(p);
+    setProdName(p.name); setProdDesc(p.description || "");
+    setProdImage(p.image_url || ""); setProdPrice(Number(p.price));
+    setProdLink(p.external_url); setProdOrder(p.order);
+  };
+  const saveProduct = async () => {
+    if (!prodName.trim() || !prodLink.trim()) {
+      return toast.error("Nome e link de destino são obrigatórios");
+    }
+    const payload = {
+      name: prodName,
+      description: prodDesc || null,
+      image_url: prodImage || null,
+      price: Number(prodPrice) || 0,
+      external_url: prodLink,
+      order: Number(prodOrder) || 0,
+    };
+    const res = editingProduct
+      ? await supabase.from('products').update(payload).eq('id', editingProduct.id)
+      : await supabase.from('products').insert([payload]);
+    if (res.error) return toast.error("Erro ao salvar produto");
+    toast.success(editingProduct ? "Produto atualizado" : "Produto criado");
+    resetProductForm();
+  };
+  const deleteProduct = async (id: string) => {
+    if (!confirm("Excluir este produto?")) return;
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) toast.error("Erro ao excluir"); else toast.success("Produto excluído");
   };
 
   const handleVideoClick = (e: React.MouseEvent, videoId: string) => {
