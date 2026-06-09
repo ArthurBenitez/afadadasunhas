@@ -1,49 +1,20 @@
-## Nova seção "Marketplace" com produtos gerenciáveis pelo admin
+## Objetivo
 
-### 1. Banco de dados
-Criar tabela `products` no backend com:
-- nome
-- descrição
-- foto (URL da imagem)
-- preço
-- link externo (para onde o cliente é direcionado ao clicar)
-- ordem de exibição
+Permitir gerenciar produtos do /marketplace diretamente da página de Cursos quando logada como admin.
 
-Regras de acesso:
-- Qualquer visitante pode visualizar os produtos.
-- Apenas administradores podem criar, editar ou excluir produtos.
+## O que será feito
 
-Criar bucket de storage `product-images` (privado, com leitura pública via política) para upload das fotos dos produtos pelo admin.
+1. Na página `/cursos`, detectar se o usuário logado tem role `admin` (mesma lógica usada em `/admin`).
+2. Quando for admin, exibir no topo da página:
+   - Botão **"Adicionar Produto"**.
+   - Logo abaixo, uma lista compacta dos produtos já cadastrados (foto, nome, preço) com ações **Editar** e **Excluir** em cada item.
+3. Reaproveitar o mesmo modal de produto que já existe em `/admin` (nome, descrição, foto, preço, link de destino, ordem), com as mesmas validações e mesma escrita na tabela `products`.
+4. Sincronizar a lista em tempo real via canal Supabase (mesmo padrão já usado).
+5. Usuárias não-admin continuam vendo a página de Cursos exatamente como hoje — nenhuma alteração visual ou funcional para elas.
 
-### 2. Nova rota pública `/marketplace`
-- Adicionar link "Marketplace" no header e footer ao lado de "Cursos" e "Agendamentos".
-- Página lista todos os produtos em formato de grid (card com foto, nome, descrição curta e preço).
-- Ao clicar em qualquer card, abre o link externo cadastrado em nova aba.
-- Meta tags próprias (title, description, og:title, og:description) para SEO.
-- Atualização em tempo real via Supabase Realtime (mesmo padrão já usado em vídeos/seções).
+## Detalhes técnicos
 
-### 3. Painel administrativo (`/admin`)
-Adicionar nova aba/seção "Produtos" com:
-- Botão **"Adicionar produto"** que abre um modal com os campos:
-  - Nome (texto)
-  - Descrição (textarea)
-  - Foto (upload de imagem para o bucket `product-images`)
-  - Preço (número, em R$)
-  - Link de destino (URL — para onde o cliente será encaminhado ao clicar)
-- Lista dos produtos cadastrados com botões **Editar** e **Excluir** em cada item.
-- Modal de edição reaproveita o mesmo formulário.
-- Exclusão e edição refletem em tempo real na listagem (sem precisar recarregar a página), seguindo o padrão já corrigido para vídeos/seções.
-
-### 4. Componentes novos
-- `src/routes/marketplace.tsx` — página pública do marketplace.
-- `src/components/admin/products-manager.tsx` — gerenciamento na área admin.
-- `src/components/admin/product-form-dialog.tsx` — modal de criação/edição.
-
-### Detalhes técnicos
-- Tabela `public.products` com RLS: `SELECT` liberado a `anon`/`authenticated`; `INSERT`/`UPDATE`/`DELETE` apenas para `has_role(auth.uid(), 'admin')`.
-- Bucket `product-images` privado com política de leitura pública em `storage.objects` e política de escrita/exclusão restrita a admins.
-- Realtime: `supabase.channel('products').on('postgres_changes', ...)` invalidando a query do React Query, igual ao padrão atual.
-- Tipos do Supabase serão regenerados após a migração aprovada antes de escrever o código que consome a tabela.
-
-### Pontos que NÃO serão alterados
-- UI, fluxo e funcionalidades existentes de Cursos, Agendamentos, Auth e Admin permanecem intactos — apenas adições.
+- Extrair o formulário/modal de produto de `src/routes/admin.tsx` para um componente reutilizável `src/components/product-form-modal.tsx`, e usar tanto em `/admin` quanto em `/cursos` (sem mudar comportamento atual do /admin).
+- Em `src/routes/cursos.tsx` (ou no leaf `cursos.index.tsx`, onde fica o cabeçalho), adicionar bloco condicional `profile?.role === 'admin'` com: botão "Adicionar Produto" + grid/lista enxuta de produtos com botões Editar/Excluir (mesmas chamadas `supabase.from('products')`).
+- Subscription realtime em `products` apenas montada quando admin.
+- Nenhuma mudança em RLS, schema ou em `/marketplace`.
