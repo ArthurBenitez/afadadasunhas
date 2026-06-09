@@ -651,6 +651,57 @@ function CursosHome() {
           </div>
         </div>
       </Modal>
+
+      {/* Admin: Products Modal */}
+      <Modal
+        opened={productsModalOpen}
+        onClose={() => setProductsModalOpen(false)}
+        title={<span className="font-display text-lg">Gerenciar produtos do marketplace</span>}
+        centered radius="lg" size="lg"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* List */}
+          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+            {products.length === 0 && <p className="text-xs text-gray-500">Nenhum produto ainda.</p>}
+            {products.map((p) => (
+              <div key={p.id} className={`rounded-lg border p-2.5 text-sm ${editingProduct?.id === p.id ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
+                <div className="flex items-start gap-2">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="h-12 w-12 shrink-0 rounded-md object-cover" />
+                  ) : (
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-gray-100 text-gray-400"><ShoppingBag className="h-4 w-4" /></div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{p.name}</p>
+                    <p className="text-[11px] text-gray-500">R$ {Number(p.price).toFixed(2)}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button onClick={() => openEditProduct(p)} className="grid h-7 w-7 place-items-center rounded-full border hover:bg-gray-50" title="Editar"><Edit2 className="h-3 w-3" /></button>
+                    <button onClick={() => deleteProduct(p.id)} className="grid h-7 w-7 place-items-center rounded-full border border-red-300 text-red-600 hover:bg-red-50" title="Excluir"><Trash2 className="h-3 w-3" /></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Form */}
+          <div className="space-y-2 border-l md:pl-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">{editingProduct ? "Editar produto" : "Novo produto"}</p>
+              {editingProduct && (
+                <button onClick={resetProductForm} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900"><X className="h-3 w-3" /> Cancelar</button>
+              )}
+            </div>
+            <TextInput label="Título" value={prodName} onChange={(e) => setProdName(e.currentTarget.value)} required size="xs" />
+            <Textarea label="Descrição" value={prodDesc} onChange={(e) => setProdDesc(e.currentTarget.value)} rows={2} size="xs" />
+            <TextInput label="URL da imagem" placeholder="https://..." value={prodImage} onChange={(e) => setProdImage(e.currentTarget.value)} size="xs" />
+            <NumberInput label="Preço (R$)" value={prodPrice} onChange={setProdPrice} min={0} decimalScale={2} fixedDecimalScale step={0.01} size="xs" />
+            <TextInput label="Link de redirecionamento" placeholder="https://loja.com/produto" value={prodLink} onChange={(e) => setProdLink(e.currentTarget.value)} required size="xs" />
+            <NumberInput label="Ordem" value={prodOrder} onChange={setProdOrder} min={0} size="xs" />
+            <Button fullWidth onClick={saveProduct} className="mt-2 bg-gradient-luxe" size="sm">{editingProduct ? "Atualizar" : "Adicionar"}</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
