@@ -8,9 +8,9 @@ import { brl } from "@/lib/booking/data";
 export const Route = createFileRoute("/marketplace")({
   head: () => ({
     meta: [
-      { title: "Marketplace — A fada das Unhas" },
+      { title: "Produtos — A fada das Unhas" },
       { name: "description", content: "Produtos selecionados pela A fada das Unhas para profissionais e amantes da manicure." },
-      { property: "og:title", content: "Marketplace — A fada das Unhas" },
+      { property: "og:title", content: "Produtos — A fada das Unhas" },
       { property: "og:description", content: "Produtos selecionados pela A fada das Unhas." },
       { property: "og:url", content: "/marketplace" },
     ],
@@ -62,7 +62,7 @@ function MarketplacePage() {
         transition={{ duration: 0.5 }}
       >
         <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-          <ShoppingBag className="h-3.5 w-3.5" /> Marketplace
+          <ShoppingBag className="h-3.5 w-3.5" /> Produtos
         </span>
         <h1 className="mt-4 font-display text-4xl text-foreground md:text-5xl">
           Nossos produtos favoritos
