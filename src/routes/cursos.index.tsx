@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { LogOut, Play, CreditCard, Loader2, CheckCircle2, Plus, Edit2, Trash2, Upload, Settings, X } from "lucide-react";
+import { LogOut, Play, CreditCard, Loader2, CheckCircle2, Plus, Edit2, Trash2, Upload, Settings, X, ShoppingBag } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Modal, Button, Text, TextInput, Textarea, NumberInput } from "@mantine/core";
@@ -47,6 +47,17 @@ function CursosHome() {
   const [svcPrice, setSvcPrice] = useState<number | string>(0);
   const [svcOrder, setSvcOrder] = useState<number | string>(0);
 
+  // Product state
+  const [productsModalOpen, setProductsModalOpen] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [prodName, setProdName] = useState("");
+  const [prodDesc, setProdDesc] = useState("");
+  const [prodImage, setProdImage] = useState("");
+  const [prodPrice, setProdPrice] = useState<number | string>(0);
+  const [prodLink, setProdLink] = useState("");
+  const [prodOrder, setProdOrder] = useState<number | string>(0);
+
   const navigate = useNavigate();
 
   const isSubscriptionActive = (sub: any, admin: boolean) => {
@@ -66,18 +77,20 @@ function CursosHome() {
       setSession(session);
 
       // Load profile, subscription, roles and sections
-      const [profileRes, subRes, sectionsRes, rolesRes, servicesRes] = await Promise.all([
+      const [profileRes, subRes, sectionsRes, rolesRes, servicesRes, productsRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('subscriptions').select('*').eq('user_id', session.user.id).maybeSingle(),
         supabase.from('sections').select('*, videos(*)').order('order', { ascending: true }),
         supabase.from('user_roles').select('role').eq('user_id', session.user.id),
         supabase.from('services').select('*').order('order', { ascending: true }),
+        supabase.from('products').select('*').order('order', { ascending: true }),
       ]);
 
       setProfile(profileRes.data);
       setSubscription(subRes.data);
       setSections(sectionsRes.data || []);
       setServices(servicesRes.data || []);
+      setProducts(productsRes.data || []);
       const admin = (rolesRes.data || []).some((r: any) => r.role === 'admin')
         || profileRes.data?.role === 'admin';
       setIsAdmin(admin);
@@ -104,6 +117,9 @@ function CursosHome() {
         loadData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
         loadData();
       })
       .subscribe();
@@ -241,6 +257,43 @@ function CursosHome() {
     if (error) toast.error("Erro ao excluir"); else toast.success("Serviço excluído");
   };
 
+  // ===== Product CRUD =====
+  const resetProductForm = () => {
+    setEditingProduct(null);
+    setProdName(""); setProdDesc(""); setProdImage("");
+    setProdPrice(0); setProdLink(""); setProdOrder(products.length);
+  };
+  const openEditProduct = (p: any) => {
+    setEditingProduct(p);
+    setProdName(p.name); setProdDesc(p.description || "");
+    setProdImage(p.image_url || ""); setProdPrice(Number(p.price));
+    setProdLink(p.external_url); setProdOrder(p.order);
+  };
+  const saveProduct = async () => {
+    if (!prodName.trim() || !prodLink.trim()) {
+      return toast.error("Nome e link de destino são obrigatórios");
+    }
+    const payload = {
+      name: prodName,
+      description: prodDesc || null,
+      image_url: prodImage || null,
+      price: Number(prodPrice) || 0,
+      external_url: prodLink,
+      order: Number(prodOrder) || 0,
+    };
+    const res = editingProduct
+      ? await supabase.from('products').update(payload).eq('id', editingProduct.id)
+      : await supabase.from('products').insert([payload]);
+    if (res.error) return toast.error("Erro ao salvar produto");
+    toast.success(editingProduct ? "Produto atualizado" : "Produto criado");
+    resetProductForm();
+  };
+  const deleteProduct = async (id: string) => {
+    if (!confirm("Excluir este produto?")) return;
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) toast.error("Erro ao excluir"); else toast.success("Produto excluído");
+  };
+
   const handleVideoClick = (e: React.MouseEvent, videoId: string) => {
     if (isSubscriptionActive(subscription, isAdmin)) {
       navigate({ to: "/cursos/$videoId", params: { videoId } });
@@ -305,6 +358,9 @@ function CursosHome() {
               </button>
               <button onClick={() => { resetServiceForm(); setServicesModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--sand)]/30 px-4 py-2 text-xs font-medium hover:bg-white/5">
                 <Settings className="h-3.5 w-3.5" /> Gerenciar serviços
+              </button>
+              <button onClick={() => { resetProductForm(); setProductsModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-luxury hover:scale-[1.02]">
+                <ShoppingBag className="h-3.5 w-3.5" /> Adicionar Produto
               </button>
               <Link to="/admin" className="rounded-full border border-[var(--sand)]/30 px-4 py-2 text-xs font-medium hover:bg-white/5">Painel</Link>
             </>
@@ -592,6 +648,57 @@ function CursosHome() {
             <NumberInput label="Preço (R$)" value={svcPrice} onChange={setSvcPrice} min={0} decimalScale={2} fixedDecimalScale size="xs" />
             <NumberInput label="Ordem" value={svcOrder} onChange={setSvcOrder} min={0} size="xs" />
             <Button fullWidth onClick={saveService} className="mt-2 bg-gradient-luxe" size="sm">{editingService ? "Atualizar" : "Adicionar"}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Admin: Products Modal */}
+      <Modal
+        opened={productsModalOpen}
+        onClose={() => setProductsModalOpen(false)}
+        title={<span className="font-display text-lg">Gerenciar produtos do marketplace</span>}
+        centered radius="lg" size="lg"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* List */}
+          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+            {products.length === 0 && <p className="text-xs text-gray-500">Nenhum produto ainda.</p>}
+            {products.map((p) => (
+              <div key={p.id} className={`rounded-lg border p-2.5 text-sm ${editingProduct?.id === p.id ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
+                <div className="flex items-start gap-2">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="h-12 w-12 shrink-0 rounded-md object-cover" />
+                  ) : (
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-gray-100 text-gray-400"><ShoppingBag className="h-4 w-4" /></div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{p.name}</p>
+                    <p className="text-[11px] text-gray-500">R$ {Number(p.price).toFixed(2)}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button onClick={() => openEditProduct(p)} className="grid h-7 w-7 place-items-center rounded-full border hover:bg-gray-50" title="Editar"><Edit2 className="h-3 w-3" /></button>
+                    <button onClick={() => deleteProduct(p.id)} className="grid h-7 w-7 place-items-center rounded-full border border-red-300 text-red-600 hover:bg-red-50" title="Excluir"><Trash2 className="h-3 w-3" /></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Form */}
+          <div className="space-y-2 border-l md:pl-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">{editingProduct ? "Editar produto" : "Novo produto"}</p>
+              {editingProduct && (
+                <button onClick={resetProductForm} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900"><X className="h-3 w-3" /> Cancelar</button>
+              )}
+            </div>
+            <TextInput label="Título" value={prodName} onChange={(e) => setProdName(e.currentTarget.value)} required size="xs" />
+            <Textarea label="Descrição" value={prodDesc} onChange={(e) => setProdDesc(e.currentTarget.value)} rows={2} size="xs" />
+            <TextInput label="URL da imagem" placeholder="https://..." value={prodImage} onChange={(e) => setProdImage(e.currentTarget.value)} size="xs" />
+            <NumberInput label="Preço (R$)" value={prodPrice} onChange={setProdPrice} min={0} decimalScale={2} fixedDecimalScale step={0.01} size="xs" />
+            <TextInput label="Link de redirecionamento" placeholder="https://loja.com/produto" value={prodLink} onChange={(e) => setProdLink(e.currentTarget.value)} required size="xs" />
+            <NumberInput label="Ordem" value={prodOrder} onChange={setProdOrder} min={0} size="xs" />
+            <Button fullWidth onClick={saveProduct} className="mt-2 bg-gradient-luxe" size="sm">{editingProduct ? "Atualizar" : "Adicionar"}</Button>
           </div>
         </div>
       </Modal>
