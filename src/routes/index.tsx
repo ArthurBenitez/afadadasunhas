@@ -12,9 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "A fada das Unhas — Estúdio premium e cursos" },
-      { name: "description", content: "Unhas impecáveis em um estúdio acolhedor. Agende seu horário ou inscreva-se nos cursos exclusivos da A fada das Unhas." },
-      { property: "og:title", content: "A fada das Unhas — Estúdio premium e cursos" },
+      { title: "A Fada Das Unhas — Estúdio premium e cursos" },
+      { name: "description", content: "Unhas impecáveis em um estúdio acolhedor. Agende seu horário ou inscreva-se nos cursos exclusivos da A Fada Das Unhas." },
+      { property: "og:title", content: "A Fada Das Unhas — Estúdio premium e cursos" },
       { property: "og:description", content: "Unhas impecáveis em um estúdio acolhedor. Agende seu horário ou inscreva-se nos cursos exclusivos." },
       { property: "og:url", content: "/" },
     ],
@@ -100,7 +100,7 @@ function HomePage() {
             <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-[2rem] shadow-luxury md:max-w-md">
               <img
                 src={heroHands}
-                alt="Profissional da A fada das Unhas com luvas pretas"
+                alt="Profissional da A Fada Das Unhas com luvas pretas"
                 className="h-full w-full object-cover"
                 width={1080}
                 height={1440}

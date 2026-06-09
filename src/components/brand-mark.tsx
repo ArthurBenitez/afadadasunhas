@@ -8,7 +8,7 @@ interface BrandMarkProps extends React.SVGProps<SVGSVGElement> {
 }
 
 /**
- * Marca da A fada das Unhas.
+ * Marca da A Fada Das Unhas.
  * Composição: círculo marsala + silhueta de unha em bege com
  * meia-lua (cuticula) destacada. Geométrico, alto contraste,
  * legível em tamanhos pequenos.
@@ -16,7 +16,7 @@ interface BrandMarkProps extends React.SVGProps<SVGSVGElement> {
 export function BrandMark({
   variant = "full",
   className,
-  title = "A fada das Unhas",
+  title = "A Fada Das Unhas",
   ...props
 }: BrandMarkProps) {
   if (variant === "mono") {

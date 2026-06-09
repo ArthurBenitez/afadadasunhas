@@ -8,10 +8,10 @@ import { brl } from "@/lib/booking/data";
 export const Route = createFileRoute("/marketplace")({
   head: () => ({
     meta: [
-      { title: "Produtos — A fada das Unhas" },
-      { name: "description", content: "Produtos selecionados pela A fada das Unhas para profissionais e amantes da manicure." },
-      { property: "og:title", content: "Produtos — A fada das Unhas" },
-      { property: "og:description", content: "Produtos selecionados pela A fada das Unhas." },
+      { title: "Produtos — A Fada Das Unhas" },
+      { name: "description", content: "Produtos selecionados pela A Fada Das Unhas para profissionais e amantes da manicure." },
+      { property: "og:title", content: "Produtos — A Fada Das Unhas" },
+      { property: "og:description", content: "Produtos selecionados pela A Fada Das Unhas." },
       { property: "og:url", content: "/marketplace" },
     ],
     links: [{ rel: "canonical", href: "/marketplace" }],
@@ -65,10 +65,10 @@ function MarketplacePage() {
           <ShoppingBag className="h-3.5 w-3.5" /> Produtos
         </span>
         <h1 className="mt-4 font-display text-4xl text-foreground md:text-5xl">
-          Nossos produtos favoritos
+          Nossos produtos
         </h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">
-          Itens cuidadosamente selecionados pela A fada das Unhas. Clique no produto para finalizar a compra.
+          Melhores produtos utilizados pela Fada Das Unhas em seus cursos e nos seus atendimentos!{" "}
         </p>
       </motion.header>
 

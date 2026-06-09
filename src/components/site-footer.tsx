@@ -6,7 +6,7 @@ export function SiteFooter() {
     <footer className="mt-20 border-t border-border/70 bg-[var(--sand)]">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-3">
         <div>
-          <p className="font-display text-2xl text-primary">a fada das unhas</p>
+          <p className="font-display text-2xl text-primary">A Fada Das Unhas</p>
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">
             Estúdio premium dedicado à arte das unhas e formação de profissionais apaixonadas.
           </p>
@@ -25,7 +25,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} A fada das Unhas. Todos os direitos reservados.
+        © {new Date().getFullYear()} A Fada Das Unhas. Todos os direitos reservados.
       </div>
     </footer>
   );
