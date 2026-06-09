@@ -359,6 +359,9 @@ function CursosHome() {
               <button onClick={() => { resetServiceForm(); setServicesModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--sand)]/30 px-4 py-2 text-xs font-medium hover:bg-white/5">
                 <Settings className="h-3.5 w-3.5" /> Gerenciar serviços
               </button>
+              <button onClick={() => { resetProductForm(); setProductsModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-luxury hover:scale-[1.02]">
+                <ShoppingBag className="h-3.5 w-3.5" /> Adicionar Produto
+              </button>
               <Link to="/admin" className="rounded-full border border-[var(--sand)]/30 px-4 py-2 text-xs font-medium hover:bg-white/5">Painel</Link>
             </>
           )}
