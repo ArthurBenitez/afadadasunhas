@@ -1,37 +1,12 @@
-## Resumo
-Inserir uma nova seção "Produtos" na home page, posicionada entre a seção de Serviços e a seção de Destaque Cursos (Plataforma aulas exclusivas). A seção exibirá até 4 produtos cadastrados na tabela `products`, com cards que mostram imagem, nome, preço e link para compra/ver oferta.
+**Objetivo:** Na tela de confirmação do agendamento ("Tudo certo, [nome]!"), adicionar um botão que redirecione o usuário para o WhatsApp com uma mensagem pré-escrita contendo data, horário e código do agendamento.
 
-## Escopo
-- Somente a página inicial (`src/routes/index.tsx`)
-- Nenhuma alteração em rotas, banco de dados, autenticação ou outros fluxos existentes
-- Os produtos já estão cadastrados na tabela `products`; basta consumi-los
+**Escopo:** Apenas o componente `Confirmation` em `src/routes/agendamentos.tsx`.
 
-## O que será feito
-
-1. **Buscar produtos na home**
-   - Adicionar estado `products` no componente `HomePage`
-   - Buscar até 4 registros da tabela `products` via Supabase, ordenados pelo campo `order` (crescente)
-   - Carregamento simples; se não houver produtos, a seção não aparece (ou mostra estado vazio discreto)
-
-2. **Nova seção de Produtos**
-   - Local exato: entre a seção `SERVIÇOS` e a seção `DESTAQUE CURSOS`
-   - Layout:
-     - Cabeçalho com label "Produtos", título e descrição curta
-     - Grid de cards (máximo 4 colunas em desktop, 2 em tablet, 1 em mobile)
-     - Cada card mostra:
-       - Imagem do produto (aspect-square, cobertura total)
-       - Nome do produto
-       - Preço formatado em BRL
-       - Badge/link "Ver oferta" que redireciona para `external_url` (abre em nova aba)
-     - Botão/link no final: "Ver todos os produtos" apontando para `/marketplace`
-
-3. **Estilo visual**
-   - Manter a paleta e tokens existentes (bege, primary, card, border)
-   - Usar `motion` (Framer Motion) para entrada animada dos cards, no mesmo padrão das outras seções (`fadeUp`, `whileInView`)
-   - Cards arredondados (`rounded-2xl`), borda sutil, sombra suave (`shadow-soft`) e efeito hover (`hover:-translate-y-1`)
-   - Tipografia com `font-display` para títulos e preços
-
-## Não será alterado
-- Marketplace (`/marketplace`) permanece inalterado
-- Painel de cursos e CRUD de produtos permanecem inalterados
-- Serviços, Cursos, CTA final e Hero da home permanecem inalterados
+**Implementação:**
+1.  Normalizar o número de WhatsApp informado (`+55 (48) 99173-5685` → `5548991735685`).
+2.  Gerar a mensagem pré-escrita dinamicamente a partir das props do componente `Confirmation` (`date`, `time`, `id`):
+    *   Formato: `Olá, Geyzi! Atendimento confirmado para {data} às {horário}. Meu código: {código}`
+    *   A data será formatada como `DD/MM/YYYY` (ex: `10/06/2026`) para ser mais enxuta na mensagem.
+3.  Construir a URL do WhatsApp: `https://wa.me/5548991735685?text={mensagemCodificada}`.
+4.  Adicionar um botão visualmente consistente (estilo primário ou contorno) logo acima ou abaixo do botão "Voltar para a home", que abra o link em uma nova aba (`target="_blank"`, `rel="noopener noreferrer"`).
+5.  Nenhuma outra funcionalidade, rota ou componente será alterado.

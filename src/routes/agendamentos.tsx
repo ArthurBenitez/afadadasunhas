@@ -334,12 +334,16 @@ function Summary({ services, date, time, subtotal, discount, total, duration }: 
 }
 
 function Confirmation({ id, services, date, time, name, total, payment }: { id: string; services: Service[]; date: string; time: string; name: string; total: number; payment: "now" | "later" }) {
+  const firstName = name.split(" ")[0];
+  const whatsappNumber = "5548991735685";
+  const whatsappMessage = `Olá, ${firstName}! Atendimento confirmado para ${dayjs(date).format("DD/MM/YYYY")} às ${time}\n\nMeu código: ${id}`;
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
   return (
     <div className="mx-auto max-w-xl px-4 py-16 text-center">
       <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 200, damping: 14 }} className="mx-auto">
         <BrandMark className="h-20 w-20 shadow-luxury rounded-full" />
       </motion.div>
-      <h1 className="mt-6 font-display text-4xl text-foreground">Tudo certo, {name.split(" ")[0]}!</h1>
+      <h1 className="mt-6 font-display text-4xl text-foreground">Tudo certo, {firstName}!</h1>
       <p className="mt-2 text-muted-foreground">Seu agendamento foi confirmado.</p>
       <div className="mt-6 rounded-2xl border border-border bg-card p-5 text-left shadow-soft">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">Código</p>
@@ -353,9 +357,19 @@ function Confirmation({ id, services, date, time, name, total, payment }: { id: 
           <span className="font-display text-xl text-primary">{brl(total)}</span>
         </div>
       </div>
-      <Link to="/" className="mt-8 inline-flex h-12 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-soft">
-        Voltar para a home
-      </Link>
+      <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-12 items-center justify-center rounded-xl bg-[#25D366] px-6 text-sm font-semibold text-white shadow-soft hover:opacity-90"
+        >
+          Enviar confirmação no WhatsApp
+        </a>
+        <Link to="/" className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-card px-6 text-sm font-semibold text-foreground hover:bg-accent">
+          Voltar para a home
+        </Link>
+      </div>
     </div>
   );
 }
