@@ -273,12 +273,15 @@ function CursosHome() {
     if (!prodName.trim() || !prodLink.trim()) {
       return toast.error("Nome e link de destino são obrigatórios");
     }
+    const normalizedLink = /^https?:\/\//i.test(prodLink.trim())
+      ? prodLink.trim()
+      : `https://${prodLink.trim()}`;
     const payload = {
       name: prodName,
       description: prodDesc || null,
       image_url: prodImage || null,
       price: Number(prodPrice) || 0,
-      external_url: prodLink,
+      external_url: normalizedLink,
       order: Number(prodOrder) || 0,
     };
     const res = editingProduct

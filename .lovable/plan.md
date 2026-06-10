@@ -1,20 +1,16 @@
-## Objetivo
+## Problema
+O link salvo (ex: `youtube.com`) é tratado como caminho relativo pelo `<a href>`, então o clique vai para `/youtube.com` em vez do site externo.
 
-Permitir gerenciar produtos do /marketplace diretamente da página de Cursos quando logada como admin.
+## Correção
+Em `src/routes/marketplace.tsx`, normalizar `external_url` antes de usar no `href`:
 
-## O que será feito
+```ts
+const toAbsolute = (url: string) =>
+  /^https?:\/\//i.test(url) ? url : `https://${url}`;
+```
 
-1. Na página `/cursos`, detectar se o usuário logado tem role `admin` (mesma lógica usada em `/admin`).
-2. Quando for admin, exibir no topo da página:
-   - Botão **"Adicionar Produto"**.
-   - Logo abaixo, uma lista compacta dos produtos já cadastrados (foto, nome, preço) com ações **Editar** e **Excluir** em cada item.
-3. Reaproveitar o mesmo modal de produto que já existe em `/admin` (nome, descrição, foto, preço, link de destino, ordem), com as mesmas validações e mesma escrita na tabela `products`.
-4. Sincronizar a lista em tempo real via canal Supabase (mesmo padrão já usado).
-5. Usuárias não-admin continuam vendo a página de Cursos exatamente como hoje — nenhuma alteração visual ou funcional para elas.
+Usar `href={toAbsolute(p.external_url)}` no `<motion.a>` do card "Ver oferta".
 
-## Detalhes técnicos
+Adicionalmente, em `src/routes/cursos.index.tsx`, aplicar a mesma normalização ao salvar o produto (`prodLink`) dentro de `saveProduct`, para que produtos novos/editados já sejam gravados com `https://`.
 
-- Extrair o formulário/modal de produto de `src/routes/admin.tsx` para um componente reutilizável `src/components/product-form-modal.tsx`, e usar tanto em `/admin` quanto em `/cursos` (sem mudar comportamento atual do /admin).
-- Em `src/routes/cursos.tsx` (ou no leaf `cursos.index.tsx`, onde fica o cabeçalho), adicionar bloco condicional `profile?.role === 'admin'` com: botão "Adicionar Produto" + grid/lista enxuta de produtos com botões Editar/Excluir (mesmas chamadas `supabase.from('products')`).
-- Subscription realtime em `products` apenas montada quando admin.
-- Nenhuma mudança em RLS, schema ou em `/marketplace`.
+Nenhuma outra UI, rota ou fluxo é alterado.
