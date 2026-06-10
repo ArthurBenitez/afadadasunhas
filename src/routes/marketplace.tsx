@@ -33,6 +33,9 @@ function MarketplacePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const toAbsolute = (url: string) =>
+    /^https?:\/\//i.test(url) ? url : `https://${url}`;
+
   const load = async () => {
     const { data } = await supabase
       .from("products")
@@ -86,7 +89,7 @@ function MarketplacePage() {
           {products.map((p, i) => (
             <motion.a
               key={p.id}
-              href={p.external_url}
+              href={toAbsolute(p.external_url)}
               target="_blank"
               rel="noopener noreferrer"
               initial={{ opacity: 0, y: 14 }}
